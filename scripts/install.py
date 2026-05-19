@@ -163,35 +163,42 @@ def install_scripts(target: Path) -> None:
     print(f"         python scripts/doc_context.py --scope be <keyword>")
 
 
-def install_cursor(target: Path) -> None:
+def _lang_suffix(lang: str) -> str:
+    return ".vi" if lang == "vi" else ""
+
+
+def install_cursor(target: Path, *, lang: str = "en") -> None:
     print("\n[cursor]")
+    src_name = f"cursor{_lang_suffix(lang)}.mdc"
     dst = target / ".cursor" / "rules" / "bs-claude-toolkit.mdc"
-    _copy(ADAPTERS_DIR / "cursor.mdc", dst)
+    _copy(ADAPTERS_DIR / src_name, dst)
     print(f"  Rule tự apply cho mọi session trong project này.")
 
 
-def install_codex(target: Path, *, global_install: bool = False) -> None:
+def install_codex(target: Path, *, global_install: bool = False, lang: str = "en") -> None:
     print("\n[codex]")
+    src_name = f"AGENTS{_lang_suffix(lang)}.md"
     if global_install:
         dst = Path.home() / ".codex" / "AGENTS.md"
-        _copy(TEMPLATES_DIR / "AGENTS.md", dst)
+        _copy(TEMPLATES_DIR / src_name, dst)
         print(f"  Global AGENTS.md installed → áp dụng mọi project.")
     else:
         dst = target / "AGENTS.md"
         if dst.exists():
             print(f"  AGENTS.md đã tồn tại — bỏ qua. Xóa file để ghi đè.")
         else:
-            _copy(TEMPLATES_DIR / "AGENTS.md", dst)
+            _copy(TEMPLATES_DIR / src_name, dst)
             print(f"  Chỉnh sửa [BE_DIR] và [FE_DIR] trong file vừa tạo.")
 
 
-def install_windsurf(target: Path) -> None:
+def install_windsurf(target: Path, *, lang: str = "en") -> None:
     print("\n[windsurf]")
+    src_name = f"windsurf{_lang_suffix(lang)}.md"
     dst = target / ".windsurf" / "rules" / "bs-claude-toolkit.md"
-    _copy(ADAPTERS_DIR / "windsurf.md", dst)
+    _copy(ADAPTERS_DIR / src_name, dst)
 
 
-def install_claude(target: Path) -> None:
+def install_claude(target: Path, *, lang: str = "en") -> None:
     print("\n[claude]")
     skill_path = Path.home() / ".claude" / "skills" / "bs-claude-toolkit"
     if TOOLKIT_ROOT == skill_path and (TOOLKIT_ROOT / "SKILL.md").exists():
@@ -201,9 +208,10 @@ def install_claude(target: Path) -> None:
         print(f"  Chưa cài global skill. Chạy:")
         print(f"    git clone https://github.com/tuannguyen-mk1/bs-claude-toolkit.git {skill_path}")
 
+    src_name = f"CLAUDE{_lang_suffix(lang)}.md"
     claude_dst = target / "CLAUDE.md"
     if not claude_dst.exists():
-        _copy(TEMPLATES_DIR / "CLAUDE.md", claude_dst)
+        _copy(TEMPLATES_DIR / src_name, claude_dst)
         print(f"  CLAUDE.md template tạo xong. Chỉnh sửa [BE_DIR] và [FE_DIR].")
     else:
         print(f"  CLAUDE.md đã tồn tại — bỏ qua.")
@@ -234,6 +242,7 @@ def _parse_args():
     p.add_argument("--mode",    default=None,   choices=["solo", "split"])
     p.add_argument("--modules", default=None,   help="be:myapp-be,fe:myapp-fe")
     p.add_argument("--scope",   default=None,   help="Personal default scope")
+    p.add_argument("--lang",    default="en",   choices=["en", "vi"], help="Template language (default: en)")
     p.add_argument("--global",  dest="global_install", action="store_true")
     p.add_argument("target",    nargs="?",      default=None)
     return p.parse_args()
@@ -273,17 +282,18 @@ def main() -> None:
 
     # Install tools
     tool = args.tool
+    lang = args.lang
     if tool == "all":
         install_scripts(target)
-        install_claude(target)
-        install_cursor(target)
-        install_codex(target, global_install=args.global_install)
-        install_windsurf(target)
+        install_claude(target, lang=lang)
+        install_cursor(target, lang=lang)
+        install_codex(target, global_install=args.global_install, lang=lang)
+        install_windsurf(target, lang=lang)
     elif tool == "scripts":  install_scripts(target)
-    elif tool == "claude":   install_claude(target)
-    elif tool == "cursor":   install_cursor(target)
-    elif tool == "codex":    install_codex(target, global_install=args.global_install)
-    elif tool == "windsurf": install_windsurf(target)
+    elif tool == "claude":   install_claude(target, lang=lang)
+    elif tool == "cursor":   install_cursor(target, lang=lang)
+    elif tool == "codex":    install_codex(target, global_install=args.global_install, lang=lang)
+    elif tool == "windsurf": install_windsurf(target, lang=lang)
 
     print(f"\nDone.\n")
 

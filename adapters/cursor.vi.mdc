@@ -1,0 +1,57 @@
+---
+description: Load project context và áp dụng quy trình AI coding (bs-claude-toolkit)
+alwaysApply: true
+---
+
+## Load Context
+
+Trước khi bắt đầu bất kỳ task nào, đọc các file theo thứ tự:
+1. `CLAUDE.md` ở thư mục gốc (luôn luôn)
+2. `CLAUDE.md` hoặc `Agents.md` bên trong các thư mục con trực tiếp có chứa thư mục `docs/` hoặc `CLAUDE.md` riêng (phát hiện submodule — hoạt động với mọi tên thư mục: `backend/`, `myapp-be/`, `api/`, `web/`, v.v.)
+
+## Research trước khi implement
+
+Luôn chạy scripts này trước khi fix bug hoặc implement tính năng:
+
+```bash
+# Tìm trong plan, changelog, test đã có
+python scripts/doc_context.py <keyword>
+python scripts/doc_context.py --scope <submodule-name> <keyword>
+
+# Tìm trong code hiện tại
+python scripts/code_research.py <keyword>
+python scripts/code_research.py --scope <submodule-name> <keyword>
+```
+
+Nếu `scripts/doc_context.py` chưa có local, chạy từ toolkit:
+```bash
+python ~/.claude/skills/bs-claude-toolkit/scripts/doc_context.py <keyword>
+```
+
+## Execution Mode
+
+| Mode | Khi nào | Được làm |
+|------|---------|---------|
+| **Planning** (mặc định) | Không có yêu cầu code rõ | Phân tích, viết tài liệu `.md`, đề xuất kiến trúc |
+| **Execution** | Được yêu cầu rõ ràng | Viết code, fix bug, refactor, viết test |
+
+Không có yêu cầu explicit → **LUÔN ở Planning mode.**
+
+## Workflow
+
+**Tính năng mới:**
+1. Research với scripts
+2. Tạo `docs/plan/sprint-{N}-{slug}.md`
+3. Implement theo plan
+4. Tạo `docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md`
+5. Tạo `docs/test/{YYYYMMDD}-test-{N}-{slug}.md`
+
+**Fix bug:** scripts → trace root cause → fix tối thiểu → changelog (không cần plan).
+
+## Quy tắc bắt buộc
+
+- Tài liệu bằng tiếng Việt có dấu (UTF-8), code dùng tiếng Anh
+- Không kết nối DB thật (production/staging)
+- Không hardcode secrets
+- Không dùng `any` type (TS) · Không dùng `print()` (Python) · Không magic numbers
+- Thay đổi API contract phải cập nhật docs ngay lập tức
