@@ -179,9 +179,9 @@ Example: "fix video retry not triggering" → `video`, `retry`, `trigger`
     4. Code review (see CODE REVIEW below)
 
     [Codex — Documentation]
-    5. Create [submodule]/docs/changelog/[DATE]-changelog-[seq]-[slug].md
-    6. Create [submodule]/docs/test/[DATE]-test-[seq]-[slug].md
-    7. Create [submodule]/docs/test/[DATE]-testlog-[seq]-[slug].md
+    5. Create [submodule]/docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+    6. Create [submodule]/docs/test/[YYYYMMDD]-[HHMM]-test-[slug].md
+    7. Create [submodule]/docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
 
   bug-fix:
     [Claude — Planning]
@@ -195,7 +195,7 @@ Example: "fix video retry not triggering" → `video`, `retry`, `trigger`
     4. Code review (see CODE REVIEW below)
 
     [Codex — Documentation]
-    5. Create [submodule]/docs/changelog/[DATE]-changelog-[seq]-[slug].md
+    5. Create [submodule]/docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
 
   question / architecture:
     1. Research → analyze → answer  (no files needed)
@@ -233,15 +233,16 @@ Example: "fix video retry not triggering" → `video`, `retry`, `trigger`
   [ ] FE: loading/error states · Polling race conditions · Cleanup on unmount
 
 ──────────────────────────────────────────────────────────────
-  FILE NAMING  (today: [YYYYMMDD])
+  FILE NAMING  (today: [YYYYMMDD], now: [HHMM])
 ──────────────────────────────────────────────────────────────
 
   Plan:      [submodule]/docs/plan/sprint-[N]-[slug].md
-  Changelog: [submodule]/docs/changelog/[DATE]-changelog-[seq]-[slug].md
-  Test doc:  [submodule]/docs/test/[DATE]-test-[seq]-[slug].md
-  Test log:  [submodule]/docs/test/[DATE]-testlog-[seq]-[slug].md
+  Changelog: [submodule]/docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+  Test doc:  [submodule]/docs/test/[YYYYMMDD]-[HHMM]-test-[slug].md
+  Test log:  [submodule]/docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
 
-  [seq] = count existing files with the same date in the folder, +1
+  [HHMM] = current local time when creating the file (24h, e.g. 1430)
+  Time in the filename makes ordering self-evident and prevents merge conflicts.
 
 ──────────────────────────────────────────────────────────────
   DEFINITION OF DONE

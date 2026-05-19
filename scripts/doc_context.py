@@ -109,7 +109,10 @@ def _trunc(s: str, n: int = MAX_LINE_LEN) -> str:
 
 
 def _date_key(name: str) -> str:
-    m = re.match(r"^(\d{8})-", name)
+    m = re.match(r"^(\d{8})-(\d{4})-", name)  # YYYYMMDD-HHMM-type-slug
+    if m:
+        return f"{m.group(1)}-{m.group(2)}"
+    m = re.match(r"^(\d{8})-", name)           # fallback: date only
     if m:
         return m.group(1)
     m = re.match(r"^sprint-(\d+)", name)

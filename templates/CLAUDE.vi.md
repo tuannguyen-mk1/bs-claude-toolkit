@@ -114,9 +114,9 @@ Hoặc dùng skill: `/bs-claude-toolkit` · `/bs-claude-toolkit be` · `/bs-clau
 | 1 | Claude | Tạo `[subdir]/docs/plan/sprint-{N}-{slug}.md` |
 | 2 | Codex | Implement theo plan |
 | 3 | Claude | **Code review** (xem checklist bên dưới) |
-| 4 | Codex | Tạo `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md` |
-| 5 | Codex | Tạo `*/docs/test/{YYYYMMDD}-test-{N}-{slug}.md` (test cases) |
-| 6 | Codex | Tạo `*/docs/test/{YYYYMMDD}-testlog-{N}-{slug}.md` (kết quả test thực tế) |
+| 4 | Codex | Tạo `*/docs/changelog/{YYYYMMDD}-{HHMM}-changelog-{slug}.md` |
+| 5 | Codex | Tạo `*/docs/test/{YYYYMMDD}-{HHMM}-test-{slug}.md` (test cases) |
+| 6 | Codex | Tạo `*/docs/test/{YYYYMMDD}-{HHMM}-testlog-{slug}.md` (kết quả test thực tế) |
 
 ### Luồng 2 — Fix bug
 
@@ -125,7 +125,7 @@ Hoặc dùng skill: `/bs-claude-toolkit` · `/bs-claude-toolkit be` · `/bs-clau
 | 0 | Claude | Scripts → trace root cause, mô tả phạm vi fix |
 | 1 | Codex | Fix tối thiểu, đúng layer, không refactor thêm |
 | 2 | Claude | **Code review** (xem checklist bên dưới) |
-| 3 | Codex | Tạo `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md` (bắt buộc) |
+| 3 | Codex | Tạo `*/docs/changelog/{YYYYMMDD}-{HHMM}-changelog-{slug}.md` (bắt buộc) |
 
 ### Code Review Checklist
 
@@ -172,11 +172,11 @@ Sau mỗi lần implement hoặc fix, tự kiểm tra:
 | Loại | Format | Ví dụ |
 |------|--------|-------|
 | Sprint plan | `sprint-{N}-{slug}.md` | `sprint-12-user-auth.md` |
-| Changelog | `{YYYYMMDD}-changelog-{N}-{slug}.md` | `20260601-changelog-1-auth-fix.md` |
-| Test doc | `{YYYYMMDD}-test-{N}-{slug}.md` | `20260601-test-1-auth.md` |
-| Test log | `{YYYYMMDD}-testlog-{N}-{slug}.md` | `20260601-testlog-1-auth.md` |
+| Changelog | `{YYYYMMDD}-{HHMM}-changelog-{slug}.md` | `20260601-1430-changelog-auth-fix.md` |
+| Test doc | `{YYYYMMDD}-{HHMM}-test-{slug}.md` | `20260601-1435-test-auth.md` |
+| Test log | `{YYYYMMDD}-{HHMM}-testlog-{slug}.md` | `20260601-1440-testlog-auth.md` |
 
-**N** = số thứ tự trong ngày theo loại. Đọc thư mục trước để lấy N đúng.
+**HHMM** = thời gian thực tế lúc tạo file (24h). Giờ trong tên file giúp sắp xếp rõ ràng và tránh conflict khi merge.
 
 ---
 

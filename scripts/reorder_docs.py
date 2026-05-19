@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-reorder_docs.py — Re-sequence doc files by creation time to fix merge conflicts.
+reorder_docs.py — Resolve doc file conflicts after git merge.
 
-After a git merge, two developers may have created files with the same
-sequence number (e.g., both 20260519-changelog-1-*.md). This script
-renumbers files in chronological order so the earliest commit keeps
-the lowest number.
+File naming convention uses HHMM timestamp so files created at different
+times are naturally unique. This script handles the rare edge case where
+two developers create a file at the exact same minute, producing a collision.
 
-Uses git first-commit time when available, falls back to file mtime.
+For sprint plan files (sprint-{N}-{slug}.md), also resolves duplicate sprint
+numbers that can occur when two developers work on the same project
+simultaneously.
+
+Uses git first-commit time as tiebreaker for same-timestamp files.
 
 Usage:
     python scripts/reorder_docs.py              # scan from cwd
@@ -16,10 +19,10 @@ Usage:
     python scripts/reorder_docs.py --scope be   # limit to one subdir
 
 File patterns handled:
-    docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md
-    docs/test/{YYYYMMDD}-test-{N}-{slug}.md
-    docs/test/{YYYYMMDD}-testlog-{N}-{slug}.md
-    docs/plan/sprint-{N}-{slug}.md  (only when duplicate Ns exist)
+    docs/changelog/{YYYYMMDD}-{HHMM}-changelog-{slug}.md
+    docs/test/{YYYYMMDD}-{HHMM}-test-{slug}.md
+    docs/test/{YYYYMMDD}-{HHMM}-testlog-{slug}.md
+    docs/plan/sprint-{N}-{slug}.md
 """
 
 import argparse
@@ -32,14 +35,13 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-DATED_RE  = re.compile(r'^(\d{8})-(changelog|test|testlog)-(\d+)-(.+)\.md$')
+DATED_RE  = re.compile(r'^(\d{8})-(\d{4})-(changelog|test|testlog)-(.+)\.md$')
 SPRINT_RE = re.compile(r'^sprint-(\d+)-(.+)\.md$')
 
 
 # ── Git time ──────────────────────────────────────────────────────────────────
 
 def _git_first_commit_time(path: Path) -> Optional[float]:
-    """Return the unix timestamp of the first (oldest) git commit for this file."""
     try:
         r = subprocess.run(
             ['git', 'log', '--follow', '--format=%at', '--', str(path)],
@@ -52,8 +54,14 @@ def _git_first_commit_time(path: Path) -> Optional[float]:
 
 
 def _sort_key(path: Path) -> float:
-    t = _git_first_commit_time(path)
-    return t if t is not None else path.stat().st_mtime
+    """Sort key: (date, time) from filename, then git time as tiebreaker."""
+    m = DATED_RE.match(path.name)
+    if m:
+        date, time = m.group(1), m.group(2)
+        base = float(f"{date}{time}")
+        git_t = _git_first_commit_time(path) or path.stat().st_mtime
+        return base + git_t * 1e-16  # tiny offset keeps timestamp order primary
+    return _git_first_commit_time(path) or path.stat().st_mtime
 
 
 # ── Discovery ─────────────────────────────────────────────────────────────────
@@ -66,40 +74,52 @@ def _find_doc_dirs(root: Path, scope: Optional[str]) -> List[Path]:
     return found
 
 
-# ── Grouping & rename computation ─────────────────────────────────────────────
+# ── Conflict detection & rename computation ───────────────────────────────────
 
 def _compute_dated_renames(doc_dir: Path) -> List[Tuple[Path, Path]]:
     """
-    For changelog/test dirs: group files by (date, type), sort each group by
-    git time, renumber 1..N. Returns all renames needed.
+    Find files with identical YYYYMMDD-HHMM-type. For each collision group,
+    keep the earliest git-commit file at the original timestamp and bump
+    later files by +1 minute until no collision remains.
     """
-    groups: Dict[Tuple[str, str], List[Path]] = defaultdict(list)
+    # Group by (date, time, type)
+    groups: Dict[Tuple[str, str, str], List[Path]] = defaultdict(list)
     for f in doc_dir.iterdir():
         if not f.is_file() or f.suffix != '.md':
             continue
         m = DATED_RE.match(f.name)
         if m:
-            date, type_ = m.group(1), m.group(2)
-            groups[(date, type_)].append(f)
+            groups[(m.group(1), m.group(2), m.group(3))].append(f)
 
     renames: List[Tuple[Path, Path]] = []
-    for (date, type_), files in sorted(groups.items()):
+    # Collect all new names to detect cross-group collisions after bump
+    taken = {f.name for f in doc_dir.iterdir() if f.is_file()}
+
+    for (date, time, type_), files in groups.items():
+        if len(files) == 1:
+            continue  # no conflict
         sorted_files = sorted(files, key=_sort_key)
-        for new_n, path in enumerate(sorted_files, start=1):
+        # First file keeps its name; subsequent files get time+1, +2, ...
+        for i, path in enumerate(sorted_files[1:], start=1):
             m = DATED_RE.match(path.name)
             assert m
-            old_n, slug = int(m.group(3)), m.group(4)
-            if old_n != new_n:
-                new_path = path.parent / f'{date}-{type_}-{new_n}-{slug}.md'
-                renames.append((path, new_path))
+            slug = m.group(4)
+            h, mn = int(time[:2]), int(time[2:])
+            for delta in range(1, 60):
+                total = h * 60 + mn + i + delta - 1
+                new_h, new_mn = divmod(total % (24 * 60), 60)
+                new_time = f"{new_h:02d}{new_mn:02d}"
+                new_name = f"{date}-{new_time}-{type_}-{slug}.md"
+                if new_name not in taken:
+                    taken.add(new_name)
+                    taken.discard(path.name)
+                    renames.append((path, path.parent / new_name))
+                    break
     return renames
 
 
 def _compute_sprint_renames(doc_dir: Path) -> List[Tuple[Path, Path]]:
-    """
-    For plan dirs: only renumber when duplicate sprint Ns exist after a merge.
-    Keeps all non-duplicate sprint numbers untouched.
-    """
+    """Only renumber when duplicate sprint Ns exist after a merge."""
     files: List[Path] = []
     for f in doc_dir.iterdir():
         if f.is_file() and f.suffix == '.md' and SPRINT_RE.match(f.name):
@@ -110,9 +130,8 @@ def _compute_sprint_renames(doc_dir: Path) -> List[Tuple[Path, Path]]:
 
     ns = [int(SPRINT_RE.match(f.name).group(1)) for f in files]  # type: ignore[union-attr]
     if len(ns) == len(set(ns)):
-        return []  # no duplicate sprint numbers — nothing to do
+        return []  # no duplicates
 
-    # Duplicates exist: sort all by time, renumber starting from min(existing Ns)
     start_n = min(ns)
     sorted_files = sorted(files, key=_sort_key)
     renames: List[Tuple[Path, Path]] = []
@@ -132,7 +151,6 @@ def _apply(renames: List[Tuple[Path, Path]], dry_run: bool) -> None:
         for old, new in renames:
             print(f'  [dry]  {old.name}  →  {new.name}')
         return
-    # Two-pass: temp rename first to avoid collisions (e.g., 2→1 when 1 still exists)
     staged: List[Tuple[Path, Path]] = []
     for old, new in renames:
         tmp = old.parent / f'_reorder_{uuid.uuid4().hex[:8]}_{old.name}'
@@ -150,9 +168,9 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument('target', nargs='?', default=None, help='Project root (default: cwd)')
-    ap.add_argument('--dry-run', '-n', action='store_true', help='Preview changes without renaming')
-    ap.add_argument('--scope', default=None, metavar='SUBDIR', help='Limit scan to one subdirectory')
+    ap.add_argument('target', nargs='?', default=None)
+    ap.add_argument('--dry-run', '-n', action='store_true', help='Preview without renaming')
+    ap.add_argument('--scope', default=None, metavar='SUBDIR')
     args = ap.parse_args()
 
     root = Path(args.target).resolve() if args.target else Path(os.getcwd()).resolve()
@@ -167,25 +185,21 @@ def main() -> None:
 
     total = 0
     for doc_dir in sorted(doc_dirs):
-        rel = doc_dir.relative_to(root)
-        dir_name = doc_dir.name  # changelog, test, or plan
-
-        if dir_name == 'plan':
-            renames = _compute_sprint_renames(doc_dir)
-        else:
-            renames = _compute_dated_renames(doc_dir)
-
+        renames = (
+            _compute_sprint_renames(doc_dir)
+            if doc_dir.name == 'plan'
+            else _compute_dated_renames(doc_dir)
+        )
         if not renames:
             continue
-
-        print(f'\n[{rel}]')
+        print(f'\n[{doc_dir.relative_to(root)}]')
         _apply(renames, args.dry_run)
         total += len(renames)
 
     if total == 0:
-        print('All files already in order — nothing to rename.')
+        print('No conflicts found — all files are uniquely named.')
     elif args.dry_run:
-        print(f'\n{total} file(s) would be renamed. Run without --dry-run to apply.')
+        print(f'\n{total} file(s) would be renamed. Remove --dry-run to apply.')
     else:
         print(f'\n{total} file(s) renamed.')
 

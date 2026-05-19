@@ -179,9 +179,9 @@ Ví dụ: "fix video retry không trigger" → `video`, `retry`, `trigger`
     4. Code review (xem CODE REVIEW bên dưới)
 
     [Codex — Documentation]
-    5. Tạo [submodule]/docs/changelog/[DATE]-changelog-[seq]-[slug].md
-    6. Tạo [submodule]/docs/test/[DATE]-test-[seq]-[slug].md
-    7. Tạo [submodule]/docs/test/[DATE]-testlog-[seq]-[slug].md
+    5. Tạo [submodule]/docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+    6. Tạo [submodule]/docs/test/[YYYYMMDD]-[HHMM]-test-[slug].md
+    7. Tạo [submodule]/docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
 
   bug-fix:
     [Claude — Planning]
@@ -195,7 +195,7 @@ Ví dụ: "fix video retry không trigger" → `video`, `retry`, `trigger`
     4. Code review (xem CODE REVIEW bên dưới)
 
     [Codex — Documentation]
-    5. Tạo [submodule]/docs/changelog/[DATE]-changelog-[seq]-[slug].md
+    5. Tạo [submodule]/docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
 
   question / architecture:
     1. Research → phân tích → trả lời  (không cần tạo file)
@@ -233,15 +233,16 @@ Ví dụ: "fix video retry không trigger" → `video`, `retry`, `trigger`
   [ ] FE: loading/error state · Race condition polling · Cleanup on unmount
 
 ──────────────────────────────────────────────────────────────
-  FILE NAMING  (today: [YYYYMMDD])
+  FILE NAMING  (today: [YYYYMMDD], now: [HHMM])
 ──────────────────────────────────────────────────────────────
 
   Plan:      [submodule]/docs/plan/sprint-[N]-[slug].md
-  Changelog: [submodule]/docs/changelog/[DATE]-changelog-[seq]-[slug].md
-  Test doc:  [submodule]/docs/test/[DATE]-test-[seq]-[slug].md
-  Test log:  [submodule]/docs/test/[DATE]-testlog-[seq]-[slug].md
+  Changelog: [submodule]/docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+  Test doc:  [submodule]/docs/test/[YYYYMMDD]-[HHMM]-test-[slug].md
+  Test log:  [submodule]/docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
 
-  [seq] = đọc thư mục trước, đếm file cùng ngày, +1
+  [HHMM] = thời gian hiện tại lúc tạo file (24h, ví dụ: 1430)
+  Giờ trong tên file giúp sắp xếp rõ ràng và tránh conflict khi merge.
 
 ──────────────────────────────────────────────────────────────
   DEFINITION OF DONE

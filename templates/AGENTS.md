@@ -65,16 +65,16 @@ python scripts/code_research.py --scope [BE_DIR] <keyword>
 2. Run research scripts to understand current code
 3. Implement following the plan
 4. **Wait for Claude code review** — address any feedback
-5. Create `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md`
-6. Create `*/docs/test/{YYYYMMDD}-test-{N}-{slug}.md` (test cases)
-7. Create `*/docs/test/{YYYYMMDD}-testlog-{N}-{slug}.md` (actual test run results)
+5. Create `*/docs/changelog/{YYYYMMDD}-{HHMM}-changelog-{slug}.md`
+6. Create `*/docs/test/{YYYYMMDD}-{HHMM}-test-{slug}.md` (test cases)
+7. Create `*/docs/test/{YYYYMMDD}-{HHMM}-testlog-{slug}.md` (actual test run results)
 
 ### Bug Fix
 
 1. Run research scripts to understand the fix scope
 2. Fix minimum scope, correct layer, no extra refactoring
 3. **Wait for Claude code review** — address any feedback
-4. Create `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md` (required)
+4. Create `*/docs/changelog/{YYYYMMDD}-{HHMM}-changelog-{slug}.md` (required)
 
 ### Code Review Checklist
 
@@ -118,12 +118,14 @@ After every implementation or fix, verify:
 
 ### File Naming
 
-| Type | Format |
-|------|--------|
-| Sprint plan | `sprint-{N}-{slug}.md` (created by Claude) |
-| Changelog | `{YYYYMMDD}-changelog-{N}-{slug}.md` |
-| Test doc | `{YYYYMMDD}-test-{N}-{slug}.md` |
-| Test log | `{YYYYMMDD}-testlog-{N}-{slug}.md` |
+| Type | Format | Example |
+|------|--------|---------|
+| Sprint plan | `sprint-{N}-{slug}.md` (created by Claude) | `sprint-12-user-auth.md` |
+| Changelog | `{YYYYMMDD}-{HHMM}-changelog-{slug}.md` | `20260601-1430-changelog-auth-fix.md` |
+| Test doc | `{YYYYMMDD}-{HHMM}-test-{slug}.md` | `20260601-1435-test-auth.md` |
+| Test log | `{YYYYMMDD}-{HHMM}-testlog-{slug}.md` | `20260601-1440-testlog-auth.md` |
+
+**HHMM** = current local time when creating the file (24h). Time in filename enables natural ordering and prevents merge conflicts.
 
 ## Conventions
 

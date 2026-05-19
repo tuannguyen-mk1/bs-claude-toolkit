@@ -65,16 +65,16 @@ python scripts/code_research.py --scope [BE_DIR] <keyword>
 2. Chạy scripts tra cứu để hiểu code hiện tại
 3. Implement theo plan
 4. **Chờ Claude review code** — xử lý feedback nếu có
-5. Tạo `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md`
-6. Tạo `*/docs/test/{YYYYMMDD}-test-{N}-{slug}.md` (test cases)
-7. Tạo `*/docs/test/{YYYYMMDD}-testlog-{N}-{slug}.md` (kết quả chạy test thực tế)
+5. Tạo `*/docs/changelog/{YYYYMMDD}-{HHMM}-changelog-{slug}.md`
+6. Tạo `*/docs/test/{YYYYMMDD}-{HHMM}-test-{slug}.md` (test cases)
+7. Tạo `*/docs/test/{YYYYMMDD}-{HHMM}-testlog-{slug}.md` (kết quả chạy test thực tế)
 
 ### Fix bug
 
 1. Chạy scripts để hiểu phạm vi fix
 2. Fix tối thiểu, đúng layer, không refactor thêm
 3. **Chờ Claude review code** — xử lý feedback nếu có
-4. Tạo `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md` (bắt buộc)
+4. Tạo `*/docs/changelog/{YYYYMMDD}-{HHMM}-changelog-{slug}.md` (bắt buộc)
 
 ### Code Review Checklist
 
@@ -118,12 +118,14 @@ Sau mỗi lần implement hoặc fix, tự kiểm tra:
 
 ### Quy tắc đặt tên file
 
-| Loại | Format |
-|------|--------|
-| Sprint plan | `sprint-{N}-{slug}.md` (do Claude tạo) |
-| Changelog | `{YYYYMMDD}-changelog-{N}-{slug}.md` |
-| Test doc | `{YYYYMMDD}-test-{N}-{slug}.md` |
-| Test log | `{YYYYMMDD}-testlog-{N}-{slug}.md` |
+| Loại | Format | Ví dụ |
+|------|--------|-------|
+| Sprint plan | `sprint-{N}-{slug}.md` (do Claude tạo) | `sprint-12-user-auth.md` |
+| Changelog | `{YYYYMMDD}-{HHMM}-changelog-{slug}.md` | `20260601-1430-changelog-auth-fix.md` |
+| Test doc | `{YYYYMMDD}-{HHMM}-test-{slug}.md` | `20260601-1435-test-auth.md` |
+| Test log | `{YYYYMMDD}-{HHMM}-testlog-{slug}.md` | `20260601-1440-testlog-auth.md` |
+
+**HHMM** = thời gian thực tế lúc tạo file (24h). Giờ trong tên file giúp sắp xếp rõ ràng và tránh conflict khi merge.
 
 ## Conventions
 
