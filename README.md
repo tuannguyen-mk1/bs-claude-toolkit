@@ -61,31 +61,27 @@ This creates:
 
 ---
 
-### Step 3 — Fill in your Tech Stack
+### Step 3 — Run the skill once
 
-Open `CLAUDE.md` and fill in the **Tech Stack** table:
+Open Claude Code in your project and type:
 
-```markdown
-| Backend language  | Python          |
-| Backend framework | FastAPI         |
-| Frontend language | TypeScript      |
-| Frontend framework| Next.js         |
-| Architecture      | layered         |
-| Async / Queue     | Celery          |
-| Database          | PostgreSQL      |
+```
+/bs-claude-toolkit
 ```
 
-Also replace `[BE_DIR]` and `[FE_DIR]` with your actual directory names.
+The skill auto-detects your stack from project files (`package.json`, `requirements.txt`, `go.mod`, `composer.json`, etc.) and outputs an action brief with the detected stack.
 
 ---
 
 ### Step 4 — Cache the stack profile
 
+After the first run, cache the detected stack so the skill skips re-detecting on every future run:
+
 ```bash
 python ~/.claude/skills/bs-claude-toolkit/scripts/install.py --setup-stack
 ```
 
-This saves the stack into `.bs-toolkit.json` so the skill doesn't re-read `CLAUDE.md` on every run (~90% token savings).
+This saves the stack into `.bs-toolkit.json` (~90% token savings on all future runs).
 
 ---
 

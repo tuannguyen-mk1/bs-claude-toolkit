@@ -61,31 +61,27 @@ Tạo ra:
 
 ---
 
-### Bước 3 — Điền Tech Stack
+### Bước 3 — Chạy skill lần đầu
 
-Mở `CLAUDE.md` và điền bảng **Tech Stack**:
+Mở Claude Code trong project và gõ:
 
-```markdown
-| Backend language  | Python          |
-| Backend framework | FastAPI         |
-| Frontend language | TypeScript      |
-| Frontend framework| Next.js         |
-| Architecture      | layered         |
-| Async / Queue     | Celery          |
-| Database          | PostgreSQL      |
+```
+/bs-claude-toolkit
 ```
 
-Đồng thời thay `[BE_DIR]` và `[FE_DIR]` bằng tên thư mục thực tế.
+Skill tự động detect stack từ project files (`package.json`, `requirements.txt`, `go.mod`, `composer.json`, v.v.) và output action brief với stack đã detect được.
 
 ---
 
 ### Bước 4 — Cache stack profile
 
+Sau lần chạy đầu, cache lại stack để các lần sau không cần detect lại:
+
 ```bash
 python ~/.claude/skills/bs-claude-toolkit/scripts/install.py --setup-stack
 ```
 
-Lưu stack vào `.bs-toolkit.json` để skill không cần đọc lại `CLAUDE.md` mỗi lần chạy (~90% tiết kiệm token).
+Lưu stack vào `.bs-toolkit.json` → tiết kiệm ~90% token cho mọi lần chạy sau.
 
 ---
 
