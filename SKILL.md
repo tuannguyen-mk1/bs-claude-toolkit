@@ -120,15 +120,23 @@ Nếu project files không đủ rõ, đọc thêm từ:
 - Mục "Coding Conventions" / "Architecture"
 - Mục "Worker" / "Queue" cho async_tech
 
-#### Sau khi detect xong
+#### Sau khi detect xong — tự động cache
 
-Nếu detect được ít nhất `lang_be` hoặc `lang_fe` → hiện:
-```
-✓ Stack detected: [BE: framework_be/lang_be] · [FE: framework_fe/lang_fe] · [arch] · async: [async_tech]
+Nếu detect được ít nhất `lang_be` hoặc `lang_fe`:
 
-💡 Cache để skip bước này lần sau (~90% token savings):
-   python ~/.claude/skills/bs-claude-toolkit/scripts/install.py --setup-stack
-```
+1. **Tự động ghi cache** vào `.bs-toolkit.json`:
+   - Đọc `.bs-toolkit.json` (hoặc tạo mới nếu chưa có)
+   - Thêm/cập nhật key `stack_profile` với tất cả giá trị detect được
+   - Ghi lại file (giữ nguyên các key khác như `team_mode`, `modules`, v.v.)
+
+2. **Thông báo ngắn** trong action brief:
+   ```
+   ✓ Stack detected & cached: [BE: framework_be/lang_be] · [FE: framework_fe/lang_fe]
+                               [arch] · async: [async_tech] · db: [database]
+     Lần sau sẽ dùng cache — không detect lại.
+   ```
+
+Nếu `.bs-toolkit.json` chưa có `team_mode` → tạo file mới với `team_mode: "solo"` và `stack_profile`.
 
 Shared files (từ config `shared_files`) — dùng để cảnh báo conflict.
 
