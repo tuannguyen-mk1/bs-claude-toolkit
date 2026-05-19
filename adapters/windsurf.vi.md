@@ -29,9 +29,18 @@ python ~/.claude/skills/bs-claude-toolkit/scripts/doc_context.py <keyword>
 
 ## Workflow
 
-**Tính năng mới:** research → `docs/plan/sprint-{N}-{slug}.md` → implement → changelog → test doc
+**Tính năng mới:** research → `docs/plan/sprint-{N}-{slug}.md` → implement → **self-review** → changelog → test doc
 
-**Fix bug:** research → trace root cause → fix tối thiểu → changelog (không cần plan file)
+**Fix bug:** research → trace root cause → fix tối thiểu → **self-review** → changelog (không cần plan file)
+
+## Code Review
+
+Sau mỗi lần implement hoặc fix, tự kiểm tra:
+
+- **Conventions:** Không `any` type (TS) · Không `print()` (Python) · Không hardcode secrets · Tên rõ ràng
+- **Architecture:** Đúng layer (controller → service → repository) · Không skip layer · Controller không chứa business logic
+- **Correctness:** Tất cả error path được handle · Async task có retry + idempotency · Edge case đã xét
+- **Contract:** API response `{ success, data, error, meta }` · Không thay đổi contract ngầm · Flow chính không bị phá
 
 ## Quy tắc bắt buộc
 

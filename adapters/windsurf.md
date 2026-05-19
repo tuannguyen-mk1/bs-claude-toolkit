@@ -29,9 +29,18 @@ python ~/.claude/skills/bs-claude-toolkit/scripts/doc_context.py <keyword>
 
 ## Workflow
 
-**New feature:** research → `docs/plan/sprint-{N}-{slug}.md` → implement → changelog → test doc
+**New feature:** research → `docs/plan/sprint-{N}-{slug}.md` → implement → **self-review** → changelog → test doc
 
-**Bug fix:** research → trace root cause → minimal fix → changelog (no plan file needed)
+**Bug fix:** research → trace root cause → minimal fix → **self-review** → changelog (no plan file needed)
+
+## Code Review
+
+After every implementation or fix, verify:
+
+- **Conventions:** No `any` type (TS) · No `print()` (Python) · No hardcoded secrets · Clear naming
+- **Architecture:** Correct layer order (controller → service → repository) · No skipping · No business logic in controller
+- **Correctness:** All error paths handled · Async tasks have retry + idempotency · Edge cases covered
+- **Contract:** API response `{ success, data, error, meta }` · No silent contract changes · Core flow intact
 
 ## Hard Rules
 

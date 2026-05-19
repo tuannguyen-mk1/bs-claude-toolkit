@@ -47,14 +47,38 @@ python scripts/code_research.py --scope [BE_DIR] <keyword>
 2. Xác định số sprint tiếp theo từ `*/docs/plan/`
 3. Tạo `[submodule]/docs/plan/sprint-{N}-{slug}.md`
 4. Implement theo plan
-5. Tạo `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md`
-6. Tạo `*/docs/test/{YYYYMMDD}-test-{N}-{slug}.md`
+5. **Self-review** code vừa viết (xem checklist bên dưới)
+6. Tạo `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md`
+7. Tạo `*/docs/test/{YYYYMMDD}-test-{N}-{slug}.md`
 
 ### Fix bug
 
 1. Chạy scripts → tìm root cause
 2. Fix tối thiểu, đúng layer, không refactor thêm
-3. Tạo changelog (bắt buộc) — không cần plan file
+3. **Self-review** code vừa sửa (xem checklist bên dưới)
+4. Tạo changelog (bắt buộc) — không cần plan file
+
+### Code Review Checklist
+
+Sau mỗi lần implement hoặc fix, tự kiểm tra:
+
+**Conventions**
+- [ ] Không `any` type (TS) · Không `print()` (Python) · Không hardcode secrets
+- [ ] Tên hàm/biến rõ ràng, self-documenting
+
+**Architecture**
+- [ ] Đúng layer: controller → service → repository (không skip)
+- [ ] Service không query DB trực tiếp · Controller không chứa business logic
+
+**Correctness**
+- [ ] Tất cả error path được handle, không silent fail
+- [ ] Async task: có retry, idempotency key, dead-letter handling
+- [ ] Edge case đã xét (null, empty, concurrent, timeout)
+
+**Contract**
+- [ ] API response đúng format: `{ success, data, error, meta }`
+- [ ] API contract không thay đổi ngầm — nếu có → cập nhật docs ngay
+- [ ] Flow chính không bị phá
 
 ### Quy tắc đặt tên file
 

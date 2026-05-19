@@ -152,17 +152,44 @@ Kiểm tra theo thứ tự:
     1. Research (doc + code)
     2. Tạo [module]/docs/plan/sprint-[N]-[slug].md
     3. Implement theo plan
-    4. Tạo [module]/docs/changelog/[DATE]-changelog-[seq]-[slug].md
-    5. Tạo [module]/docs/test/[DATE]-test-[seq]-[slug].md
+    4. Self-review code vừa viết (xem CODE REVIEW bên dưới)
+    5. Tạo [module]/docs/changelog/[DATE]-changelog-[seq]-[slug].md
+    6. Tạo [module]/docs/test/[DATE]-test-[seq]-[slug].md
 
   bug-fix:
     1. Research → trace root cause
     2. Fix minimum scope, đúng layer
-    3. Tạo [module]/docs/changelog/[DATE]-changelog-[seq]-[slug].md
+    3. Self-review code vừa sửa (xem CODE REVIEW bên dưới)
+    4. Tạo [module]/docs/changelog/[DATE]-changelog-[seq]-[slug].md
 
   question / architecture:
     1. Research → phân tích → trả lời
     (không cần tạo file)
+
+──────────────────────────────────────────────────────────────
+  CODE REVIEW  (sau mỗi lần implement/fix)
+──────────────────────────────────────────────────────────────
+
+  Conventions
+  [ ] Không dùng `any` type (TypeScript)
+  [ ] Không dùng `print()` (Python) — dùng structured logging
+  [ ] Không hardcode secrets, API keys, magic numbers
+  [ ] Tên hàm/biến rõ ràng, self-documenting
+
+  Architecture
+  [ ] Đúng layer: controller → service → repository (không skip layer)
+  [ ] Service không query DB trực tiếp
+  [ ] Controller không chứa business logic
+
+  Correctness
+  [ ] Tất cả error path được handle, không silent fail
+  [ ] Async task: có retry, idempotency key, dead-letter handling
+  [ ] Edge case đã xét (null, empty, concurrent, timeout)
+
+  Contract
+  [ ] API response format đúng: { success, data, error, meta }
+  [ ] Không thay đổi API contract ngầm — nếu có thay đổi → cập nhật docs
+  [ ] Flow chính không bị phá
 
 ──────────────────────────────────────────────────────────────
   FILE NAMING  (today: [YYYYMMDD])

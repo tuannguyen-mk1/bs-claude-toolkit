@@ -87,7 +87,7 @@ Hoặc dùng skill: `/ctx` · `/ctx [BE_DIR]` · `/ctx [FE_DIR]`
 ## AI Coding Workflow
 
 ```
-PLAN  ──►  IMPLEMENTATION  ──►  CHANGELOG  ──►  TEST
+PLAN  ──►  IMPLEMENTATION  ──►  REVIEW  ──►  CHANGELOG  ──►  TEST
 ```
 
 ### Luồng 1 — Implement feature mới
@@ -97,8 +97,9 @@ PLAN  ──►  IMPLEMENTATION  ──►  CHANGELOG  ──►  TEST
 | 0 | Scripts → xác định sprint N tiếp theo (đọc `*/docs/plan/`) |
 | 1 | Tạo `[BE_DIR]/docs/plan/sprint-{N}-{slug}.md` và/hoặc `[FE_DIR]/docs/plan/sprint-{N}-{slug}.md` |
 | 2 | Code theo plan — scope thay đổi → cập nhật plan TRƯỚC |
-| 3 | Tạo `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md` |
-| 4 | Tạo `*/docs/test/{YYYYMMDD}-test-{N}-{slug}.md` |
+| 3 | **Self-review** code vừa viết (xem checklist bên dưới) |
+| 4 | Tạo `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md` |
+| 5 | Tạo `*/docs/test/{YYYYMMDD}-test-{N}-{slug}.md` |
 
 ### Luồng 2 — Fix bug
 
@@ -106,7 +107,30 @@ PLAN  ──►  IMPLEMENTATION  ──►  CHANGELOG  ──►  TEST
 |------|-----------|
 | 0 | Scripts → tìm root cause |
 | 1 | Fix tối thiểu, đúng layer, không refactor thêm |
-| 2 | Tạo `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md` (bắt buộc) |
+| 2 | **Self-review** code vừa sửa (xem checklist bên dưới) |
+| 3 | Tạo `*/docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md` (bắt buộc) |
+
+### Code Review Checklist
+
+Sau mỗi lần implement hoặc fix, tự kiểm tra:
+
+**Conventions**
+- [ ] Không `any` type (TS) · Không `print()` (Python) · Không hardcode secrets
+- [ ] Tên hàm/biến rõ ràng, self-documenting
+
+**Architecture**
+- [ ] Đúng layer: controller → service → repository (không skip)
+- [ ] Service không query DB trực tiếp · Controller không chứa business logic
+
+**Correctness**
+- [ ] Tất cả error path được handle, không silent fail
+- [ ] Async task: có retry, idempotency, dead-letter handling
+- [ ] Edge case đã xét (null, empty, concurrent, timeout)
+
+**Contract**
+- [ ] API response đúng format: `{ success, data, error, meta }`
+- [ ] API contract không thay đổi ngầm — nếu có → cập nhật docs ngay
+- [ ] Flow chính không bị phá
 
 ### Quy tắc đặt tên file tài liệu
 

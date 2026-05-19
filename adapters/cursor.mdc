@@ -43,10 +43,20 @@ No explicit request → **always stay in Planning mode.**
 1. Research with scripts
 2. Create `docs/plan/sprint-{N}-{slug}.md`
 3. Implement following the plan
-4. Create `docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md`
-5. Create `docs/test/{YYYYMMDD}-test-{N}-{slug}.md`
+4. **Self-review** code just written (see Code Review below)
+5. Create `docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md`
+6. Create `docs/test/{YYYYMMDD}-test-{N}-{slug}.md`
 
-**Bug fix:** scripts → trace root cause → fix minimum scope → changelog (no plan needed).
+**Bug fix:** scripts → trace root cause → fix minimum scope → **self-review** → changelog (no plan needed).
+
+## Code Review
+
+After every implementation or fix, verify:
+
+- **Conventions:** No `any` type (TS) · No `print()` (Python) · No hardcoded secrets · Clear naming
+- **Architecture:** Correct layer order (controller → service → repository) · No skipping · No business logic in controller
+- **Correctness:** All error paths handled · Async tasks have retry + idempotency · Edge cases covered
+- **Contract:** API response format `{ success, data, error, meta }` · No silent API contract changes · Core flow intact
 
 ## Hard Rules
 

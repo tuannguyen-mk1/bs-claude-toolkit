@@ -43,10 +43,20 @@ Không có yêu cầu explicit → **LUÔN ở Planning mode.**
 1. Research với scripts
 2. Tạo `docs/plan/sprint-{N}-{slug}.md`
 3. Implement theo plan
-4. Tạo `docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md`
-5. Tạo `docs/test/{YYYYMMDD}-test-{N}-{slug}.md`
+4. **Self-review** code vừa viết (xem Code Review bên dưới)
+5. Tạo `docs/changelog/{YYYYMMDD}-changelog-{N}-{slug}.md`
+6. Tạo `docs/test/{YYYYMMDD}-test-{N}-{slug}.md`
 
-**Fix bug:** scripts → trace root cause → fix tối thiểu → changelog (không cần plan).
+**Fix bug:** scripts → trace root cause → fix tối thiểu → **self-review** → changelog (không cần plan).
+
+## Code Review
+
+Sau mỗi lần implement hoặc fix, tự kiểm tra:
+
+- **Conventions:** Không `any` type (TS) · Không `print()` (Python) · Không hardcode secrets · Tên rõ ràng
+- **Architecture:** Đúng layer (controller → service → repository) · Không skip layer · Controller không chứa business logic
+- **Correctness:** Tất cả error path được handle · Async task có retry + idempotency · Edge case đã xét
+- **Contract:** API response `{ success, data, error, meta }` · Không thay đổi contract ngầm · Flow chính không bị phá
 
 ## Quy tắc bắt buộc
 
