@@ -1,6 +1,6 @@
 ---
-description: Three modes — plan (research + create sprint doc), review (read git diff + apply checklist), brief (orientation). Load project context, detect stack, compute next sprint.
-arguments: [plan [scope] task | review [scope] | [scope] [task]]
+description: "Three modes: plan (research + create sprint doc), review (read git diff + apply checklist), brief (orientation). Load project context, detect stack, compute next sprint."
+arguments: "plan [scope] task | review [scope] | [scope] [task]"
 ---
 
 ## Sub-commands
