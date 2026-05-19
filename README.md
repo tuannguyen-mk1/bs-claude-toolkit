@@ -139,25 +139,7 @@ Starting-point files copied into your project during `install.py`. Edit after co
 | `CLAUDE.vi.md` | Vietnamese version |
 | `AGENTS.md` | Project context for Codex (OpenAI) — same content, plain markdown format |
 | `AGENTS.vi.md` | Vietnamese version |
-| `.bs-toolkit.json` | Solo team config — `team_mode`, `modules`, `stack_profile` |
-| `.bs-toolkit.split.json` | Split team config — adds `shared_files` zone definitions |
-| `.bs-toolkit.local.json.example` | Personal scope example (gitignored, per-developer) |
-
----
-
-## Split team (2 developers)
-
-```bash
-# Project lead — run once, commit .bs-toolkit.json
-python ~/.claude/skills/bs-claude-toolkit/scripts/install.py \
-  --mode split --modules be:myapp-be,fe:myapp-fe
-
-# Each developer — set personal scope (not committed)
-python ~/.claude/skills/bs-claude-toolkit/scripts/install.py --scope be
-python ~/.claude/skills/bs-claude-toolkit/scripts/install.py --scope fe
-```
-
-Sprint numbers are independent per submodule — BE on sprint-15, FE on sprint-8 is normal.
+| `.bs-toolkit.json` | Team config — `stack_profile` and optional `modules` name mapping |
 
 ---
 

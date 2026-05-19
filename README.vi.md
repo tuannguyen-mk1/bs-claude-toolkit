@@ -139,25 +139,7 @@ Các file mẫu được copy vào project khi chạy `install.py`. Chỉnh sử
 | `CLAUDE.vi.md` | Phiên bản tiếng Việt |
 | `AGENTS.md` | Context cho Codex (OpenAI) — nội dung tương tự, định dạng plain markdown |
 | `AGENTS.vi.md` | Phiên bản tiếng Việt |
-| `.bs-toolkit.json` | Config solo team — `team_mode`, `modules`, `stack_profile` |
-| `.bs-toolkit.split.json` | Config split team — thêm `shared_files` zone definitions |
-| `.bs-toolkit.local.json.example` | Ví dụ personal scope (gitignored, per-developer) |
-
----
-
-## Split team (2 developers)
-
-```bash
-# Project lead — chạy 1 lần, commit .bs-toolkit.json
-python ~/.claude/skills/bs-claude-toolkit/scripts/install.py \
-  --mode split --modules be:myapp-be,fe:myapp-fe
-
-# Mỗi developer — set personal scope (không commit)
-python ~/.claude/skills/bs-claude-toolkit/scripts/install.py --scope be
-python ~/.claude/skills/bs-claude-toolkit/scripts/install.py --scope fe
-```
-
-Số sprint độc lập theo submodule — BE ở sprint-15, FE ở sprint-8 là bình thường.
+| `.bs-toolkit.json` | Config team — `stack_profile` và optional `modules` name mapping |
 
 ---
 
