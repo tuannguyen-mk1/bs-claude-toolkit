@@ -1,6 +1,6 @@
 ---
-description: "Ba mode: plan (research + tạo sprint doc), review (đọc git diff + apply checklist), brief (orientation). Load project context, detect stack, tính sprint tiếp theo."
-arguments: "plan [scope] task | review [scope] | [scope] [task]"
+description: "Bốn mode: plan (research + sprint doc), test (tạo integration test plan + scaffold), review (git diff + checklist), brief (orientation + commands). Tích hợp BE↔FE contract test + E2E."
+arguments: "plan [scope] task | test [scope] | review [scope] | [scope] [task]"
 ---
 
 ## Sub-commands
@@ -8,12 +8,13 @@ arguments: "plan [scope] task | review [scope] | [scope] [task]"
 | Lệnh | Ai chạy | Làm gì |
 |------|---------|--------|
 | `/bs-claude-toolkit plan [scope] task` | Claude | Research → tạo `sprint-N-slug.md` → dừng |
+| `/bs-claude-toolkit test [scope]` | Claude | Đọc diff → tạo test plan + scaffold code → dừng |
 | `/bs-claude-toolkit review [scope]` | Claude | Đọc git diff → apply checklist → output findings |
 | `/bs-claude-toolkit [scope]` | Claude | Chỉ orientation brief — không tạo file, không chạy script |
 
 **Phân công:**
-- **Claude** → `plan` + `review`
-- **Codex** → implement + changelog + test doc + testlog + chạy tests
+- **Claude** → `plan` + `test` + `review`
+- **Codex** → implement + điền test logic + chạy tests + changelog + testlog
 
 ---
 
@@ -39,6 +40,7 @@ Check `.bs-toolkit.json` ở root:
 
 Từ đầu tiên của `$ARGUMENTS`:
 - `plan`   → MODE = plan   · phần còn lại = `[scope?] mô tả task`
+- `test`   → MODE = test   · phần còn lại = `[scope?]`
 - `review` → MODE = review · phần còn lại = `[scope?]`
 - khác     → MODE = brief  · tất cả = `[scope?] [task?]`
 
@@ -192,6 +194,10 @@ Trước khi render brief, kiểm tra project health:
   /bs-claude-toolkit plan fix video retry     → plan bug fix (tất cả scope)
   /bs-claude-toolkit plan be add upload api   → plan scoped vào BE
 
+  /bs-claude-toolkit test                     → tạo BE↔FE integration test plan + scaffold
+  /bs-claude-toolkit test be                  → chỉ tạo contract tests cho BE
+  /bs-claude-toolkit test fe                  → chỉ tạo E2E tests cho FE
+
   /bs-claude-toolkit review                   → review diff tất cả submodule
   /bs-claude-toolkit review be                → review chỉ BE
   /bs-claude-toolkit review fe                → review chỉ FE
@@ -203,10 +209,15 @@ Trước khi render brief, kiểm tra project health:
   1. Claude:  /bs-claude-toolkit plan [scope] [task]
               → research + tạo sprint-[N]-slug.md
 
-  2. Codex:   tag plan → implement → changelog + test docs + chạy tests
+  2. Codex:   tag plan → implement
 
-  3. Claude:  /bs-claude-toolkit review [scope]
-              → review git diff của Codex theo checklist
+  3. Claude:  /bs-claude-toolkit test [scope]
+              → tạo contract test + E2E scaffold
+
+  4. Codex:   điền test logic → chạy tests → changelog + testlog
+
+  5. Claude:  /bs-claude-toolkit review [scope]
+              → review diff + tests của Codex theo checklist
 
 ══════════════════════════════════════════════════════════════
 ```
@@ -327,11 +338,247 @@ Next → Codex:
   1. Tag [đường dẫn plan] vào context
   2. Implement theo plan
   3. Kiểm tra không có regression ở file bị ảnh hưởng
-  4. Tạo docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
-  5. Tạo docs/test/[YYYYMMDD]-[HHMM]-test-[slug].md
-  6. Tạo docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
 
-Codex xong → Claude: /bs-claude-toolkit review [scope]
+Tiếp → Claude: /bs-claude-toolkit test [scope]
+  → tạo contract test + E2E scaffold
+
+Tiếp → Codex:
+  4. Điền test logic (TODO comments trong scaffold files)
+  5. Chạy tests — tạo docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
+  6. Tạo docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+
+Tất cả xong → Claude: /bs-claude-toolkit review [scope]
+```
+
+---
+
+### MODE: test  *(Claude tạo integration test plan + scaffold — Codex điền logic)*
+
+**Bước 1 — Load context**
+
+Đọc sprint plan mới nhất (giống review Bước 1):
+- Lấy SPRINT_SLUG, task type, danh sách CHANGED_FILES
+- Nếu không có plan → dùng diff trực tiếp, đặt SPRINT_SLUG theo ngày hôm nay
+
+Đọc diff trong từng submodule trong SCOPE:
+```bash
+git -C {submodule} diff main...HEAD
+```
+Fallback sang `HEAD~1` nếu `main...HEAD` trống.
+
+**Bước 2 — Đọc cấu trúc test hiện có**
+
+Với mỗi submodule trong SCOPE:
+```bash
+ls {submodule}/tests/
+```
+
+Scan để hiểu:
+- **Framework test** — detect từ deps: `pytest`/`unittest` (Python) · `jest`/`vitest` (TS/JS) · `testing` pkg (Go) · `JUnit` (Java)
+- **Framework E2E** — detect: `playwright` / `cypress` / `selenium`
+- **Convention hiện tại** — đọc 1–2 file test có sẵn: pattern fixture/factory, auth helper, assertion style, cách đặt tên file
+- **Thư mục test** — ghi chú path chính xác: `backend/tests/`, `frontend/tests/`, `frontend/tests/e2e/`, v.v.
+
+**Bước 3 — Trích xuất API contract surface**
+
+Từ **BE diff**, trích xuất mọi endpoint mới hoặc đã thay đổi:
+```
+METHOD  /path/to/endpoint
+  Request:  { field: type, ... }
+  Response: { field: type, ... }
+  Auth:     required / optional / none
+  Errors:   4xx codes + điều kiện
+```
+
+Từ **FE diff**, trích xuất mọi API call mới hoặc đã cập nhật:
+```
+Method + URL được gọi
+Payload gửi đi
+Response fields được dùng (destructure/access)
+Loading/error states được handle
+```
+
+**Bước 4 — Cross-map contract pairs**
+
+Với mỗi FE API call → tìm BE endpoint tương ứng.
+
+| FE call | BE endpoint khớp | Match |
+|---------|-----------------|-------|
+| `POST /api/upload` | `POST /api/upload` | ✓ |
+| `GET /api/videos/:id` | `GET /api/videos/{id}` | ✓ |
+| `DELETE /api/item` | *(không thấy trong BE diff)* | ⚠ có thể dùng route sẵn có |
+
+Cặp không khớp → ghi chú nhưng vẫn tạo test cho chúng.
+
+**Bước 5 — Tạo test plan document**
+
+Ghi vào: `{submodule}/docs/test/{YYYYMMDD}-{HHMM}-test-{SPRINT_SLUG}.md`
+
+```markdown
+# Test Plan — Sprint [N] — [slug]
+
+**Ngày:** [YYYYMMDD]
+**Sprint:** [đường dẫn plan file]
+**Framework BE:** [pytest / jest / go test / ...]
+**Framework E2E:** [playwright / cypress / none]
+
+---
+
+## Contract Tests
+
+> Mục tiêu: verify mỗi BE endpoint trả đúng shape mà FE expect.
+> Chạy độc lập — không cần browser, không cần FE running.
+> File: `backend/tests/integration/test_{SPRINT_SLUG}.[ext]`
+
+### [METHOD] [/path] — [tên endpoint]
+
+| Case | Input | Expected status | Expected response |
+|------|-------|-----------------|-------------------|
+| Happy path | [payload] | 200 | [shape] |
+| Auth required | no token | 401 | `{"error": "..."}` |
+| Validation error | [invalid payload] | 422 | `{"errors": [...]}` |
+| Not found | [missing id] | 404 | `{"error": "..."}` |
+
+[lặp lại cho mỗi endpoint]
+
+---
+
+## E2E Tests
+
+> Mục tiêu: verify user flow từ UI đến BE hoạt động end-to-end.
+> Chạy với real BE (local hoặc staging). Không mock API.
+> File: `frontend/tests/e2e/{SPRINT_SLUG}.spec.[ext]`
+
+### Flow: [tên user flow]
+
+**Điều kiện:** [user đã login / dữ liệu tồn tại / ...]
+
+| Bước | Action | Expected |
+|------|--------|----------|
+| 1 | navigate to [/path] | page tải xong |
+| 2 | [tương tác] | [UI state] |
+| 3 | [tương tác] | [API được gọi + response được handle] |
+| 4 | assert | [UI state cuối] |
+
+[lặp lại cho mỗi flow quan trọng]
+
+---
+
+## Definition of Done (Tests)
+
+- [ ] Tất cả contract tests pass với real BE (không mock)
+- [ ] Tất cả E2E tests pass local
+- [ ] Fixtures/factories tạo xong cho test data
+- [ ] Không hardcode test data — dùng factory
+- [ ] Tests chạy được trong CI
+```
+
+**Bước 6 — Generate scaffold test files**
+
+Viết file scaffold thực tế. Dùng syntax đúng của framework. Thêm comment `# TODO: Codex` tại mọi chỗ Codex cần điền logic. Không để stub trống — viết hoàn chỉnh cấu trúc.
+
+**Contract test scaffold** → `{be_submodule}/tests/integration/test_{SPRINT_SLUG}.{ext}`
+
+Python / pytest:
+```python
+import pytest
+
+class Test[EndpointName]:
+    def test_happy_path(self, client, auth_headers, [fixture]):
+        # TODO: Codex — điều chỉnh payload theo request schema thực tế
+        payload = { ... }
+        response = client.[method]("/api/[path]", json=payload, headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        # TODO: Codex — assert tất cả field mà FE sử dụng
+        assert "field_name" in data
+
+    def test_unauthorized(self, client):
+        response = client.[method]("/api/[path]", json={})
+        assert response.status_code == 401
+
+    def test_validation_error(self, client, auth_headers):
+        # TODO: Codex — dùng field invalid hoặc thiếu required field
+        payload = { ... }
+        response = client.[method]("/api/[path]", json=payload, headers=auth_headers)
+        assert response.status_code == 422
+
+    def test_not_found(self, client, auth_headers):
+        # TODO: Codex — dùng ID không tồn tại
+        response = client.[method]("/api/[path]/99999999", headers=auth_headers)
+        assert response.status_code == 404
+```
+
+TypeScript / Jest hoặc Vitest:
+```typescript
+describe("[EndpointName]", () => {
+  it("trả 200 với đúng shape khi happy path", async () => {
+    // TODO: Codex — tạo real auth token và payload
+    const response = await request(app).[method]("/api/[path]")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ /* TODO */ });
+    expect(response.status).toBe(200);
+    // TODO: Codex — assert các field FE destructure
+    expect(response.body).toMatchObject({ field: expect.any(String) });
+  });
+
+  it("trả 401 khi không có auth", async () => {
+    const response = await request(app).[method]("/api/[path]").send({});
+    expect(response.status).toBe(401);
+  });
+});
+```
+
+**E2E test scaffold** → `{fe_submodule}/tests/e2e/{SPRINT_SLUG}.spec.{ext}`
+
+Playwright:
+```typescript
+import { test, expect } from "@playwright/test";
+
+test.describe("[Tên flow]", () => {
+  test.beforeEach(async ({ page }) => {
+    // TODO: Codex — login và setup điều kiện ban đầu
+    await page.goto("/login");
+  });
+
+  test("[mô tả happy path]", async ({ page }) => {
+    // TODO: Codex — navigate đến entry point của feature
+    await page.goto("/[path]");
+    // TODO: Codex — tương tác với UI (dùng data-testid)
+    await page.click("[data-testid=...]");
+    // TODO: Codex — đợi API response và assert UI
+    await expect(page.locator("[data-testid=...]")).toBeVisible();
+  });
+
+  test("[mô tả error / edge case]", async ({ page }) => {
+    // TODO: Codex — simulate điều kiện lỗi
+    await page.goto("/[path]");
+    // TODO: Codex — assert error state hiển thị
+    await expect(page.locator("[data-testid=error-message]")).toBeVisible();
+  });
+});
+```
+
+Điều chỉnh syntax theo framework đã detect. Theo đúng convention test hiện có của project từ Bước 2.
+
+**Bước 7 — Output**
+
+```
+✓ Test plan:       {submodule}/docs/test/{YYYYMMDD}-{HHMM}-test-{SPRINT_SLUG}.md
+✓ Contract tests:  {be}/tests/integration/test_{SPRINT_SLUG}.{ext}
+✓ E2E tests:       {fe}/tests/e2e/{SPRINT_SLUG}.spec.{ext}
+
+Contract pairs: [N khớp] · [M không khớp (⚠ có thể route sẵn có)]
+E2E flows: [N flow]
+
+Next → Codex:
+  1. Điền TODO trong file contract test
+  2. Điền TODO trong file E2E test
+  3. Tạo fixtures/factories cho test data
+  4. Chạy tests: [lệnh test theo framework]
+  5. Tạo docs/test/{YYYYMMDD}-{HHMM}-testlog-{SPRINT_SLUG}.md với kết quả
+
+Tests pass → Claude: /bs-claude-toolkit review [scope]
 ```
 
 ---

@@ -1,6 +1,6 @@
 ---
-description: "Three modes: plan (research + create sprint doc), review (read git diff + apply checklist), brief (orientation). Load project context, detect stack, compute next sprint."
-arguments: "plan [scope] task | review [scope] | [scope] [task]"
+description: "Four modes: plan (research + sprint doc), test (generate integration test plan + scaffold), review (git diff + checklist), brief (orientation + commands). BE↔FE contract + E2E testing built-in."
+arguments: "plan [scope] task | test [scope] | review [scope] | [scope] [task]"
 ---
 
 ## Sub-commands
@@ -8,12 +8,13 @@ arguments: "plan [scope] task | review [scope] | [scope] [task]"
 | Command | Who | What it does |
 |---------|-----|--------------|
 | `/bs-claude-toolkit plan [scope] task` | Claude | Research → create `sprint-N-slug.md` → stop |
+| `/bs-claude-toolkit test [scope]` | Claude | Read diff → generate test plan + scaffold code → stop |
 | `/bs-claude-toolkit review [scope]` | Claude | Read git diff → apply checklist → output findings |
 | `/bs-claude-toolkit [scope]` | Claude | Orientation brief only — no files, no scripts |
 
 **Team split:**
-- **Claude** → `plan` + `review`
-- **Codex** → implement + changelog + test doc + testlog + run tests
+- **Claude** → `plan` + `test` + `review`
+- **Codex** → implement + fill test logic + run tests + changelog + testlog
 
 ---
 
@@ -39,6 +40,7 @@ Check `.bs-toolkit.json` at the project root:
 
 First word of `$ARGUMENTS`:
 - `plan`   → MODE = plan   · remaining words = `[scope?] task description`
+- `test`   → MODE = test   · remaining word = `[scope?]`
 - `review` → MODE = review · remaining word = `[scope?]`
 - else     → MODE = brief  · all words = `[scope?] [task?]`
 
@@ -199,6 +201,10 @@ Before rendering the brief, silently check project health:
   /bs-claude-toolkit plan fix video retry     → plan for a bug fix (all scopes)
   /bs-claude-toolkit plan be add upload api   → plan scoped to BE
 
+  /bs-claude-toolkit test                     → generate BE↔FE integration test plan + scaffold
+  /bs-claude-toolkit test be                  → generate contract tests for BE only
+  /bs-claude-toolkit test fe                  → generate E2E tests for FE only
+
   /bs-claude-toolkit review                   → review diff in all submodules
   /bs-claude-toolkit review be                → review BE diff only
   /bs-claude-toolkit review fe                → review FE diff only
@@ -210,10 +216,15 @@ Before rendering the brief, silently check project health:
   1. Claude:  /bs-claude-toolkit plan [scope] [task]
               → researches + creates sprint-[N]-slug.md
 
-  2. Codex:   tag plan → implement → changelog + test docs + run tests
+  2. Codex:   tag plan → implement
 
-  3. Claude:  /bs-claude-toolkit review [scope]
-              → reviews Codex's git diff against checklist
+  3. Claude:  /bs-claude-toolkit test [scope]
+              → generates contract test + E2E scaffold
+
+  4. Codex:   fill test logic → run tests → changelog + testlog
+
+  5. Claude:  /bs-claude-toolkit review [scope]
+              → reviews Codex's diff + tests against checklist
 
 ══════════════════════════════════════════════════════════════
 ```
@@ -336,11 +347,248 @@ Next → Codex:
   1. Tag [plan path] in your context
   2. Implement following the plan
   3. Verify no regression in affected files
-  4. Create docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
-  5. Create docs/test/[YYYYMMDD]-[HHMM]-test-[slug].md
-  6. Create docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
 
-When Codex is done → Claude: /bs-claude-toolkit review [scope]
+Then → Claude: /bs-claude-toolkit test [scope]
+  → generates contract + E2E test scaffold
+
+Then → Codex:
+  4. Fill in test logic (TODO comments in scaffold files)
+  5. Run tests — create docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
+  6. Create docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+
+When all done → Claude: /bs-claude-toolkit review [scope]
+```
+
+---
+
+### MODE: test  *(Claude generates integration test plan + scaffold — Codex fills logic)*
+
+**Step 1 — Load context**
+
+Read the latest sprint plan (same as review Step 1):
+- Extract SPRINT_SLUG, task type, CHANGED_FILES list
+- If no plan → use diff directly, set SPRINT_SLUG from today's date
+
+Read the diff in each scoped submodule:
+```bash
+git -C {submodule} diff main...HEAD
+```
+Fall back to `HEAD~1` if `main...HEAD` is empty.
+
+**Step 2 — Read existing test structure**
+
+For each submodule in SCOPE:
+```bash
+ls {submodule}/tests/
+```
+
+Scan to understand:
+- **Test framework** — detect from deps: `pytest` / `unittest` (Python) · `jest` / `vitest` (TS/JS) · `testing` pkg (Go) · `JUnit` (Java)
+- **E2E framework** — detect: `playwright` / `cypress` / `selenium`
+- **Existing conventions** — read 1–2 existing test files to learn: fixture/factory patterns, auth helpers, assertion style, file naming
+- **Test directories** — note exact paths: `backend/tests/`, `frontend/tests/`, `frontend/tests/e2e/`, etc.
+
+**Step 3 — Extract API contract surface**
+
+From the **BE diff**, extract every new or changed endpoint:
+```
+METHOD  /path/to/endpoint
+  Request:  { field: type, ... }
+  Response: { field: type, ... }
+  Auth:     required / optional / none
+  Errors:   4xx codes + conditions
+```
+
+From the **FE diff**, extract every new or changed API call:
+```
+Method + URL called
+Payload sent
+Response fields consumed (destructured/accessed)
+Loading/error states handled
+```
+
+**Step 4 — Cross-map contract pairs**
+
+For each FE API call → match to BE endpoint.
+
+| FE call | Matched BE endpoint | Match |
+|---------|--------------------|----|
+| `POST /api/upload` | `POST /api/upload` | ✓ |
+| `GET /api/videos/:id` | `GET /api/videos/{id}` | ✓ |
+| `DELETE /api/item` | *(not found in BE diff)* | ⚠ may use existing route |
+
+Unmatched pairs → note but still generate tests for them.
+
+**Step 5 — Generate test plan document**
+
+Write to: `{submodule}/docs/test/{YYYYMMDD}-{HHMM}-test-{SPRINT_SLUG}.md`
+
+```markdown
+# Test Plan — Sprint [N] — [slug]
+
+**Ngày:** [YYYYMMDD]
+**Sprint:** [path to plan file]
+**Framework BE:** [pytest / jest / go test / ...]
+**Framework E2E:** [playwright / cypress / none]
+
+---
+
+## Contract Tests
+
+> Mục tiêu: verify mỗi BE endpoint trả đúng shape mà FE expect.
+> Chạy độc lập — không cần browser, không cần FE running.
+> File: `backend/tests/integration/test_{SPRINT_SLUG}.[ext]`
+
+### [METHOD] [/path] — [tên endpoint]
+
+| Case | Input | Expected status | Expected response |
+|------|-------|-----------------|-------------------|
+| Happy path | [payload] | 200 | [shape] |
+| Auth required | no token | 401 | `{"error": "..."}` |
+| Validation error | [invalid payload] | 422 | `{"errors": [...]}` |
+| Not found | [missing id] | 404 | `{"error": "..."}` |
+
+[repeat for each endpoint]
+
+---
+
+## E2E Tests
+
+> Mục tiêu: verify user flow từ UI đến BE hoạt động end-to-end.
+> Chạy với real BE (local hoặc staging). Không mock API.
+> File: `frontend/tests/e2e/{SPRINT_SLUG}.spec.[ext]`
+
+### Flow: [tên user flow]
+
+**Precondition:** [user đã login / dữ liệu tồn tại / ...]
+
+| Bước | Action | Expected |
+|------|--------|----------|
+| 1 | navigate to [/path] | page loads |
+| 2 | [interact] | [UI state] |
+| 3 | [interact] | [API called + response handled] |
+| 4 | assert | [final UI state] |
+
+[repeat for each key flow]
+
+---
+
+## Definition of Done (Tests)
+
+- [ ] Tất cả contract tests pass với real BE (không mock)
+- [ ] Tất cả E2E tests pass local
+- [ ] Fixtures/factories tạo xong cho test data
+- [ ] Không hardcode test data — dùng factory
+- [ ] Tests chạy được trong CI
+```
+
+**Step 6 — Generate scaffold test files**
+
+Write actual scaffold files. Use real framework syntax. Add `# TODO: Codex` comments at every place Codex needs to fill in logic. Do NOT leave empty stubs — write the structure completely.
+
+**Contract test scaffold** → `{be_submodule}/tests/integration/test_{SPRINT_SLUG}.{ext}`
+
+Python / pytest example:
+```python
+import pytest
+
+class Test[EndpointName]:
+    def test_happy_path(self, client, auth_headers, [fixture]):
+        # TODO: Codex — adjust payload to match actual request schema
+        payload = { ... }
+        response = client.[method]("/api/[path]", json=payload, headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        # TODO: Codex — assert all fields FE consumes
+        assert "field_name" in data
+        assert data["field_name"] == expected
+
+    def test_unauthorized(self, client):
+        response = client.[method]("/api/[path]", json={})
+        assert response.status_code == 401
+
+    def test_validation_error(self, client, auth_headers):
+        # TODO: Codex — use invalid/missing required fields
+        payload = { ... }
+        response = client.[method]("/api/[path]", json=payload, headers=auth_headers)
+        assert response.status_code == 422
+
+    def test_not_found(self, client, auth_headers):
+        # TODO: Codex — use non-existent ID
+        response = client.[method]("/api/[path]/99999999", headers=auth_headers)
+        assert response.status_code == 404
+```
+
+TypeScript / Jest or Vitest example:
+```typescript
+describe("[EndpointName]", () => {
+  it("returns 200 with correct shape for happy path", async () => {
+    // TODO: Codex — build real auth token and payload
+    const response = await request(app).[method]("/api/[path]")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ /* TODO */ });
+    expect(response.status).toBe(200);
+    // TODO: Codex — assert all fields FE destructures
+    expect(response.body).toMatchObject({ field: expect.any(String) });
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    const response = await request(app).[method]("/api/[path]").send({});
+    expect(response.status).toBe(401);
+  });
+});
+```
+
+**E2E test scaffold** → `{fe_submodule}/tests/e2e/{SPRINT_SLUG}.spec.{ext}`
+
+Playwright example:
+```typescript
+import { test, expect } from "@playwright/test";
+
+test.describe("[Flow name]", () => {
+  test.beforeEach(async ({ page }) => {
+    // TODO: Codex — login and set up preconditions
+    await page.goto("/login");
+  });
+
+  test("[happy path description]", async ({ page }) => {
+    // TODO: Codex — navigate to the feature entry point
+    await page.goto("/[path]");
+    // TODO: Codex — interact with UI elements (use data-testid)
+    await page.click("[data-testid=...]");
+    // TODO: Codex — wait for API response and assert UI
+    await expect(page.locator("[data-testid=...]")).toBeVisible();
+  });
+
+  test("[error / edge case description]", async ({ page }) => {
+    // TODO: Codex — simulate error condition
+    await page.goto("/[path]");
+    // TODO: Codex — assert error state is displayed
+    await expect(page.locator("[data-testid=error-message]")).toBeVisible();
+  });
+});
+```
+
+Adapt syntax to the detected framework. Match the project's existing test conventions from Step 2.
+
+**Step 7 — Output**
+
+```
+✓ Test plan:       {submodule}/docs/test/{YYYYMMDD}-{HHMM}-test-{SPRINT_SLUG}.md
+✓ Contract tests:  {be}/tests/integration/test_{SPRINT_SLUG}.{ext}
+✓ E2E tests:       {fe}/tests/e2e/{SPRINT_SLUG}.spec.{ext}
+
+Contract pairs: [N matched] · [M unmatched (⚠ existing routes)]
+E2E flows: [N flows]
+
+Next → Codex:
+  1. Fill in TODO comments in contract test file
+  2. Fill in TODO comments in E2E test file
+  3. Create fixtures/factories for test data
+  4. Run tests: [test command per framework]
+  5. Create docs/test/{YYYYMMDD}-{HHMM}-testlog-{SPRINT_SLUG}.md with results
+
+When tests pass → Claude: /bs-claude-toolkit review [scope]
 ```
 
 ---
