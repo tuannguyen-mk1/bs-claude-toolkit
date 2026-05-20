@@ -154,6 +154,11 @@ Code identifiers, file paths, and technical terms (API names, library names, err
 
 ### MODE: brief  *(orientation only — no files created, no scripts run)*
 
+Before rendering the brief, silently check project health:
+1. Find the latest sprint plan in each scoped submodule (`docs/plan/sprint-*.md`)
+2. Read it — scan DoD checkboxes (`- [x]` vs `- [ ]`)
+3. Check if changelog / test doc / testlog exist for that sprint slug
+
 ```
 ╔══════════════════════════════════════════════════════════════╗
   PROJECT BRIEF  [scope: all | submodule-name]
@@ -164,6 +169,23 @@ Code identifiers, file paths, and technical terms (API names, library names, err
                [arch] · async: [async_tech] · db: [database]
   Stack src:   [⚡ cached | 🔍 detected from project files]
   Next Sprint: [N]  (last: sprint-[N-1]-[name])
+
+──────────────────────────────────────────────────────────────
+  🏥 PROJECT HEALTH
+──────────────────────────────────────────────────────────────
+
+  Active sprint: sprint-[N-1]-[slug]  ([date])
+  DoD:  [checked/total] items done
+    [ ] [unchecked item 1]
+    [ ] [unchecked item 2]
+
+  Deliverables:
+    changelog  [✓ exists | ✗ missing]
+    test doc   [✓ exists | ✗ missing]
+    testlog    [✓ exists | ✗ missing]
+
+  → Next action: [one specific action — e.g. "Run /review be" or "Codex: create changelog"]
+  [If all DoD done + all deliverables present]: ✓ Sprint [N-1] complete — ready for sprint [N]
 
 ──────────────────────────────────────────────────────────────
   WORKFLOW
@@ -195,6 +217,19 @@ Run both scripts and read their full output before writing anything:
 
 Internalize: relevant past decisions from plan history, existing code patterns and file paths, root cause (if bug-fix) or current gap (if feature).
 
+**Step 1.5 — Impact analysis**
+
+Before writing the plan, identify what else will be affected by this change:
+
+1. From the research output, note the target files/functions/classes/endpoints.
+2. Grep for usages of those symbols in files *outside* the target files:
+   ```bash
+   grep -r "[symbol]" {submodule} --include="*.py" -l   # adjust extension per lang
+   ```
+3. Build a list: **AFFECTED** = files that call into or depend on the target area.
+4. For each affected file, briefly note: why it's affected and whether the change could break it.
+5. Assess risk level: **thấp** (no interface change), **trung** (interface change but backward-compatible), **cao** (breaking change to callers).
+
 **Step 2 — Create plan file**
 
 Write to: `[submodule]/docs/plan/sprint-[N]-[slug].md`
@@ -221,6 +256,18 @@ Write the entire file in Vietnamese with full diacritical marks (tiếng Việt 
 [Bug-fix: root cause kèm file:line tham chiếu.
  Feature: gap hiện tại, approach được chọn, trade-off.]
 
+## Impact Analysis
+
+| File bị ảnh hưởng | Lý do |
+|-------------------|-------|
+| `path/to/caller.py` | gọi function X sẽ thay đổi signature |
+
+## Risk Assessment
+
+| Rủi ro | Mức độ | Cách giảm thiểu |
+|--------|--------|-----------------|
+| [mô tả rủi ro] | thấp / trung / cao | [cách xử lý] |
+
 ## Kế hoạch Implement
 
 ### Các file cần sửa
@@ -234,6 +281,14 @@ Write the entire file in Vietnamese with full diacritical marks (tiếng Việt 
 1. [Bước cụ thể]
 2. [Bước cụ thể]
 
+## Test Cases
+
+| Case | Input | Expected output |
+|------|-------|-----------------|
+| Happy path | [input bình thường] | [kết quả đúng] |
+| Edge case | [input biên] | [kết quả đúng] |
+| Failure case | [input lỗi] | [error/exception đúng] |
+
 ## Code Review Checklist
 
 [Dán các checklist item phù hợp với stack + loại task này]
@@ -242,6 +297,7 @@ Write the entire file in Vietnamese with full diacritical marks (tiếng Việt 
 
 - [ ] Code chạy được local
 - [ ] Tests pass: happy + edge + failure case
+- [ ] Không có regression ở AFFECTED files
 - [ ] Changelog tạo xong
 - [ ] Test doc + test log tạo xong
 - [ ] Flow chính không bị phá
@@ -253,12 +309,16 @@ Write the entire file in Vietnamese with full diacritical marks (tiếng Việt 
 ```
 ✓ Plan created: [submodule]/docs/plan/sprint-[N]-[slug].md
 
+Impact: [N] file(s) affected — [thấp | trung | cao] risk
+  [list AFFECTED files if risk is trung/cao]
+
 Next → Codex:
   1. Tag [plan path] in your context
   2. Implement following the plan
-  3. Create docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
-  4. Create docs/test/[YYYYMMDD]-[HHMM]-test-[slug].md
-  5. Create docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
+  3. Verify no regression in affected files
+  4. Create docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+  5. Create docs/test/[YYYYMMDD]-[HHMM]-test-[slug].md
+  6. Create docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
 
 When Codex is done → Claude: /bs-claude-toolkit review [scope]
 ```
@@ -397,25 +457,62 @@ CQRS         → Commands and queries fully separate · Read/write models indepe
 
 Apply every item from the "Code Review Checklist" section of the sprint plan that is not already covered above.
 
-**Step 6 — Verify deliverables**
+**Step 6 — Regression check**
 
-Check that Codex has created all required docs for the current sprint slug:
+Build **DEPENDENT_FILES**: files *not* in CHANGED_FILES that import or call into any changed file.
 
+```bash
+grep -r "[changed_module_name]" {submodule} --include="*.py" -l   # adjust per lang
+```
+
+For each changed function/method/class visible in the diff:
+- Extract old signature (from `-` lines) and new signature (from `+` lines)
+- Search DEPENDENT_FILES for call sites using the old signature
+- For each call site found: assess compatibility with the new signature
+
+| Finding | Action |
+|---------|--------|
+| Call site is compatible | ✓ no regression |
+| Call site passes removed/renamed arg | ✗ regression — flag file:line |
+| Call site expects old return shape | ✗ regression — flag file:line |
+| Call site not found (unused code) | ⚠ note only |
+
+Limit: check at most 10 dependent files to control token usage. Prioritize files closest in the call chain.
+
+**Step 7 — Verify deliverables (with quality check)**
+
+Check existence:
 ```bash
 ls {submodule}/docs/changelog/*-changelog-{slug}*.md
 ls {submodule}/docs/test/*-test-{slug}*.md
 ls {submodule}/docs/test/*-testlog-{slug}*.md
 ```
 
-| File | Status |
-|------|--------|
-| changelog | ✓ exists / ✗ missing |
-| test doc  | ✓ exists / ✗ missing |
-| testlog   | ✓ exists / ✗ missing |
-
 If slug is unknown, check for any files created/modified today matching the patterns above.
 
-**Step 7 — Output review report**
+If a file **exists**, read it and check quality:
+
+**changelog** — must have:
+- [ ] Date header or date in filename
+- [ ] At least one bullet point describing a real change (not just template text)
+- [ ] No placeholder text left (`[mô tả]`, `TODO`, etc.)
+
+**test doc** — must have:
+- [ ] At least one test case with input + expected output
+- [ ] Happy / edge / failure cases present
+- [ ] No placeholder text left
+
+**testlog** — must have:
+- [ ] Actual pass/fail results (not just template)
+- [ ] Total passed / failed count
+
+| File | Status | Quality |
+|------|--------|---------|
+| changelog | ✓ / ✗ | ✓ complete / ⚠ stub |
+| test doc  | ✓ / ✗ | ✓ complete / ⚠ stub |
+| testlog   | ✓ / ✗ | ✓ complete / ⚠ stub |
+
+**Step 8 — Output review report**
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
@@ -456,12 +553,20 @@ If slug is unknown, check for any files created/modified today matching the patt
   Tests changed: [list of test files touched]
 
 ──────────────────────────────────────────────────────────────
+  🔁 REGRESSION RISK
+──────────────────────────────────────────────────────────────
+
+  Dependents checked: [N files]
+  ✓  No regression risk found
+  ✗  [file:line] — calls [old_signature], now incompatible
+
+──────────────────────────────────────────────────────────────
   📦 DELIVERABLES
 ──────────────────────────────────────────────────────────────
 
-  changelog  ✓ / ✗
-  test doc   ✓ / ✗
-  testlog    ✓ / ✗
+  changelog  [✓ complete | ⚠ stub | ✗ missing]
+  test doc   [✓ complete | ⚠ stub | ✗ missing]
+  testlog    [✓ complete | ⚠ stub | ✗ missing]
 
 ──────────────────────────────────────────────────────────────
   VERDICT
