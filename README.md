@@ -33,7 +33,6 @@ A Claude Code skill that runs a structured, 3-step AI-assisted sprint workflow �
 | Command | Who | What it produces |
 |---------|-----|-----------------|
 | `/bs-claude-toolkit plan [scope] <task>` | Claude | `sprint-N-slug.md` + test scaffold — context, analysis, impact, risk, test cases |
-| `/bs-claude-toolkit test [scope]` | Claude | Contract test scaffold + E2E scaffold + test plan doc *(standalone — optional)* |
 | `/bs-claude-toolkit review [scope]` | Claude | Review report — plan compliance, code quality, security, regression, deliverables |
 | `/bs-claude-toolkit [scope]` | Claude | Project brief — stack, sprint health, DoD status, next action |
 
@@ -76,73 +75,6 @@ File: be/services/video_service.py:143
 | Risk              | Level  | Mitigation                  |
 | Race condition    | medium | Use DB-level locking        |
 ```
-
----
-
-### `/test` — Integration test generation *(standalone)*
-
-> **In the main workflow, test scaffold is generated automatically at the end of `/plan`.** Use `/test` as a standalone command when you need to regenerate scaffolds after implementation (e.g. scope changed, endpoints evolved).
-
-Claude reads the diff, extracts the API contract surface, and writes scaffold files Codex fills in:
-
-```
-Contract tests  →  backend/tests/integration/test_{slug}.{ext}
-E2E tests       →  frontend/tests/e2e/{slug}.spec.{ext}
-Test plan doc   →  {submodule}/docs/test/{YYYYMMDD}-{HHMM}-test-{slug}.md
-```
-
-**Example** — standalone regeneration after scope change:
-
-```
-/bs-claude-toolkit test
-```
-
-Claude writes `backend/tests/integration/test_fix_video_retry.py`:
-
-```python
-class TestVideoRetry:
-    def test_retry_succeeds_when_pending(self, client, auth_headers, pending_video):
-        # TODO: Codex — call retry endpoint and verify status change
-        response = client.post(f"/api/videos/{pending_video.id}/retry",
-                               headers=auth_headers)
-        assert response.status_code == 200
-        assert response.json()["status"] == "running"
-
-    def test_retry_rejected_when_already_running(self, client, auth_headers, running_video):
-        # TODO: Codex — verify 409 when video is already running
-        response = client.post(f"/api/videos/{running_video.id}/retry",
-                               headers=auth_headers)
-        assert response.status_code == 409
-
-    def test_unauthorized(self, client):
-        response = client.post("/api/videos/1/retry")
-        assert response.status_code == 401
-```
-
-And `frontend/tests/e2e/fix-video-retry.spec.ts`:
-
-```typescript
-test.describe("Video retry flow", () => {
-  test("user can retry a failed video", async ({ page }) => {
-    // TODO: Codex — navigate to video detail page
-    await page.goto("/videos/failed-video-id");
-    // TODO: Codex — click retry button and verify UI state
-    await page.click("[data-testid=retry-btn]");
-    await expect(page.locator("[data-testid=status]")).toHaveText("Processing...");
-  });
-
-  test("retry button disabled when video is running", async ({ page }) => {
-    // TODO: Codex — verify button is disabled for running video
-    await page.goto("/videos/running-video-id");
-    await expect(page.locator("[data-testid=retry-btn]")).toBeDisabled();
-  });
-});
-```
-
-- **Contract tests** verify every BE endpoint returns the exact shape FE expects — run without a browser
-- **E2E tests** simulate full user flows from UI through to BE response
-- Scaffold uses your project's actual test framework (auto-detected from deps)
-- `# TODO: Codex` marks every place Codex needs to fill in logic
 
 ---
 
@@ -237,11 +169,6 @@ The skill auto-detects your stack from project files and caches it into `.bs-too
 /bs-claude-toolkit plan fix video retry not triggering
 /bs-claude-toolkit plan be add pagination to orders API
 /bs-claude-toolkit plan fe refactor asset upload flow
-
-# Regenerate tests standalone (optional — plan already generates scaffold)
-/bs-claude-toolkit test
-/bs-claude-toolkit test be          ← contract tests for BE only
-/bs-claude-toolkit test fe          ← E2E tests for FE only
 
 # Review after Codex implements, runs tests, and creates docs
 /bs-claude-toolkit review

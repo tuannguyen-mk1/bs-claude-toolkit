@@ -8,7 +8,6 @@ arguments: "plan [scope] task | test [scope] | review [scope] | [scope] [task]"
 | Command | Who | What it does |
 |---------|-----|--------------|
 | `/bs-claude-toolkit plan [scope] task` | Claude | Research → create `sprint-N-slug.md` + test scaffold → stop |
-| `/bs-claude-toolkit test [scope]` | Claude | Read diff → generate test plan + scaffold code → stop *(standalone — optional)* |
 | `/bs-claude-toolkit review [scope]` | Claude | Read git diff → apply checklist → output findings |
 | `/bs-claude-toolkit [scope]` | Claude | Orientation brief only — no files, no scripts |
 
@@ -200,10 +199,6 @@ Before rendering the brief, silently check project health:
   /bs-claude-toolkit plan [scope] <task>      → research + create sprint plan
   /bs-claude-toolkit plan fix video retry     → plan for a bug fix (all scopes)
   /bs-claude-toolkit plan be add upload api   → plan scoped to BE
-
-  /bs-claude-toolkit test                     → generate BE↔FE integration test plan + scaffold
-  /bs-claude-toolkit test be                  → generate contract tests for BE only
-  /bs-claude-toolkit test fe                  → generate E2E tests for FE only
 
   /bs-claude-toolkit review                   → review diff in all submodules
   /bs-claude-toolkit review be                → review BE diff only

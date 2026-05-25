@@ -8,7 +8,6 @@ arguments: "plan [scope] task | test [scope] | review [scope] | [scope] [task]"
 | Lệnh | Ai chạy | Làm gì |
 |------|---------|--------|
 | `/bs-claude-toolkit plan [scope] task` | Claude | Research → tạo `sprint-N-slug.md` + test scaffold → dừng |
-| `/bs-claude-toolkit test [scope]` | Claude | Đọc diff → tạo test plan + scaffold code → dừng *(standalone — tùy chọn)* |
 | `/bs-claude-toolkit review [scope]` | Claude | Đọc git diff → apply checklist → output findings |
 | `/bs-claude-toolkit [scope]` | Claude | Chỉ orientation brief — không tạo file, không chạy script |
 
@@ -193,10 +192,6 @@ Trước khi render brief, kiểm tra project health:
   /bs-claude-toolkit plan [scope] <task>      → research + tạo sprint plan
   /bs-claude-toolkit plan fix video retry     → plan bug fix (tất cả scope)
   /bs-claude-toolkit plan be add upload api   → plan scoped vào BE
-
-  /bs-claude-toolkit test                     → tạo BE↔FE integration test plan + scaffold
-  /bs-claude-toolkit test be                  → chỉ tạo contract tests cho BE
-  /bs-claude-toolkit test fe                  → chỉ tạo E2E tests cho FE
 
   /bs-claude-toolkit review                   → review diff tất cả submodule
   /bs-claude-toolkit review be                → review chỉ BE
