@@ -7,14 +7,14 @@ arguments: "plan [scope] task | test [scope] | review [scope] | [scope] [task]"
 
 | Lệnh | Ai chạy | Làm gì |
 |------|---------|--------|
-| `/bs-claude-toolkit plan [scope] task` | Claude | Research → tạo `sprint-N-slug.md` → dừng |
-| `/bs-claude-toolkit test [scope]` | Claude | Đọc diff → tạo test plan + scaffold code → dừng |
+| `/bs-claude-toolkit plan [scope] task` | Claude | Research → tạo `sprint-N-slug.md` + test scaffold → dừng |
+| `/bs-claude-toolkit test [scope]` | Claude | Đọc diff → tạo test plan + scaffold code → dừng *(standalone — tùy chọn)* |
 | `/bs-claude-toolkit review [scope]` | Claude | Đọc git diff → apply checklist → output findings |
 | `/bs-claude-toolkit [scope]` | Claude | Chỉ orientation brief — không tạo file, không chạy script |
 
 **Phân công:**
-- **Claude** → `plan` + `test` + `review`
-- **Codex** → implement + điền test logic + chạy tests + changelog + testlog
+- **Claude** → `plan` (bao gồm test scaffold) + `review`
+- **Codex** → implement + điền test TODOs + chạy tests + changelog + testlog
 
 ---
 
@@ -207,17 +207,13 @@ Trước khi render brief, kiểm tra project health:
 ──────────────────────────────────────────────────────────────
 
   1. Claude:  /bs-claude-toolkit plan [scope] [task]
-              → research + tạo sprint-[N]-slug.md
+              → research + sprint plan + test scaffold
 
-  2. Codex:   tag plan → implement
+  2. Codex:   implement + điền test TODOs + chạy tests
+              → tạo changelog + testlog
 
-  3. Claude:  /bs-claude-toolkit test [scope]
-              → tạo contract test + E2E scaffold
-
-  4. Codex:   điền test logic → chạy tests → changelog + testlog
-
-  5. Claude:  /bs-claude-toolkit review [scope]
-              → review diff + tests của Codex theo checklist
+  3. Claude:  /bs-claude-toolkit review [scope]
+              → review diff + tests theo checklist
 
 ══════════════════════════════════════════════════════════════
 ```
@@ -326,10 +322,35 @@ Ghi vào: `[submodule]/docs/plan/sprint-[N]-[slug].md`
 - [ ] Không vi phạm language rules · Không hardcode secrets
 ```
 
-**Bước 3 — Output**
+**Bước 3 — Generate test scaffold** *(dựa trên nội dung plan — không cần diff)*
+
+1. Detect test framework từ `stack_profile` (logic giống test mode Bước 2).
+2. Đọc cấu trúc test hiện có để theo đúng convention:
+   ```bash
+   ls {submodule}/tests/
+   ```
+   Đọc 1–2 file test sẵn có để học: pattern fixture/factory, auth helper, assertion style, cách đặt tên file.
+
+3. Từ bảng **"Test Cases"** và danh sách **"Các bước"** trong plan, trích xuất:
+   - Endpoint / function được plan (METHOD + path + shape request/response nếu có)
+   - Happy path, edge case, failure case
+
+4. Tạo test plan doc → `{submodule}/docs/test/{YYYYMMDD}-{HHMM}-test-{SPRINT_SLUG}.md`
+   (cùng format với test mode Bước 5)
+
+5. Tạo scaffold files (cùng với test mode Bước 6):
+   - Contract test scaffold → `{be_submodule}/tests/integration/test_{SPRINT_SLUG}.{ext}`
+   - E2E test scaffold → `{fe_submodule}/tests/e2e/{SPRINT_SLUG}.spec.{ext}`
+
+   Dùng syntax đúng của framework. Thêm `# TODO: Codex` tại mọi chỗ Codex cần điền logic.
+
+**Bước 4 — Output**
 
 ```
-✓ Plan tạo xong: [submodule]/docs/plan/sprint-[N]-[slug].md
+✓ Plan:            [submodule]/docs/plan/sprint-[N]-[slug].md
+✓ Test plan:       [submodule]/docs/test/[YYYYMMDD]-[HHMM]-test-[slug].md
+✓ Contract tests:  [be]/tests/integration/test_[slug].[ext]
+✓ E2E tests:       [fe]/tests/e2e/[slug].spec.[ext]
 
 Impact: [N] file(s) bị ảnh hưởng — rủi ro [thấp | trung | cao]
   [liệt kê AFFECTED files nếu rủi ro trung/cao]
@@ -337,15 +358,13 @@ Impact: [N] file(s) bị ảnh hưởng — rủi ro [thấp | trung | cao]
 Next → Codex:
   1. Tag [đường dẫn plan] vào context
   2. Implement theo plan
-  3. Kiểm tra không có regression ở file bị ảnh hưởng
-
-Tiếp → Claude: /bs-claude-toolkit test [scope]
-  → tạo contract test + E2E scaffold
-
-Tiếp → Codex:
-  4. Điền test logic (TODO comments trong scaffold files)
-  5. Chạy tests — tạo docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
-  6. Tạo docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+  3. Điền TODO trong file contract test
+  4. Điền TODO trong file E2E test
+  5. Tạo fixtures/factories cho test data
+  6. Chạy tests: [lệnh test theo framework]
+  7. Tạo docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md với kết quả
+  8. Tạo docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+  9. Kiểm tra không có regression ở file bị ảnh hưởng
 
 Tất cả xong → Claude: /bs-claude-toolkit review [scope]
 ```

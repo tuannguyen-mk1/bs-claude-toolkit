@@ -7,14 +7,14 @@ arguments: "plan [scope] task | test [scope] | review [scope] | [scope] [task]"
 
 | Command | Who | What it does |
 |---------|-----|--------------|
-| `/bs-claude-toolkit plan [scope] task` | Claude | Research → create `sprint-N-slug.md` → stop |
-| `/bs-claude-toolkit test [scope]` | Claude | Read diff → generate test plan + scaffold code → stop |
+| `/bs-claude-toolkit plan [scope] task` | Claude | Research → create `sprint-N-slug.md` + test scaffold → stop |
+| `/bs-claude-toolkit test [scope]` | Claude | Read diff → generate test plan + scaffold code → stop *(standalone — optional)* |
 | `/bs-claude-toolkit review [scope]` | Claude | Read git diff → apply checklist → output findings |
 | `/bs-claude-toolkit [scope]` | Claude | Orientation brief only — no files, no scripts |
 
 **Team split:**
-- **Claude** → `plan` + `test` + `review`
-- **Codex** → implement + fill test logic + run tests + changelog + testlog
+- **Claude** → `plan` (includes test scaffold) + `review`
+- **Codex** → implement + fill test TODOs + run tests + changelog + testlog
 
 ---
 
@@ -214,17 +214,13 @@ Before rendering the brief, silently check project health:
 ──────────────────────────────────────────────────────────────
 
   1. Claude:  /bs-claude-toolkit plan [scope] [task]
-              → researches + creates sprint-[N]-slug.md
+              → research + sprint plan + test scaffold
 
-  2. Codex:   tag plan → implement
+  2. Codex:   implement + fill test TODOs + run tests
+              → create changelog + testlog
 
-  3. Claude:  /bs-claude-toolkit test [scope]
-              → generates contract test + E2E scaffold
-
-  4. Codex:   fill test logic → run tests → changelog + testlog
-
-  5. Claude:  /bs-claude-toolkit review [scope]
-              → reviews Codex's diff + tests against checklist
+  3. Claude:  /bs-claude-toolkit review [scope]
+              → reviews diff + tests against checklist
 
 ══════════════════════════════════════════════════════════════
 ```
@@ -335,10 +331,35 @@ Write the entire file in Vietnamese with full diacritical marks (tiếng Việt 
 - [ ] Không vi phạm language rules · Không hardcode secrets
 ```
 
-**Step 3 — Output**
+**Step 3 — Generate test scaffold** *(based on plan content — no diff needed)*
+
+1. Detect test framework from `stack_profile` (same logic as test mode Step 2).
+2. Read existing test structure to match conventions:
+   ```bash
+   ls {submodule}/tests/
+   ```
+   Read 1–2 existing test files to learn: fixture/factory patterns, auth helpers, assertion style, file naming.
+
+3. From the plan's **"Test Cases"** table and **"Các bước"** list, extract:
+   - Planned endpoints / functions (METHOD + path + request/response shape when applicable)
+   - Happy path, edge, and failure cases
+
+4. Generate test plan doc → `{submodule}/docs/test/{YYYYMMDD}-{HHMM}-test-{SPRINT_SLUG}.md`
+   (same format as test mode Step 5)
+
+5. Generate scaffold files (same as test mode Step 6):
+   - Contract test scaffold → `{be_submodule}/tests/integration/test_{SPRINT_SLUG}.{ext}`
+   - E2E test scaffold → `{fe_submodule}/tests/e2e/{SPRINT_SLUG}.spec.{ext}`
+
+   Use real framework syntax. Add `# TODO: Codex` at every place Codex must fill in logic.
+
+**Step 4 — Output**
 
 ```
-✓ Plan created: [submodule]/docs/plan/sprint-[N]-[slug].md
+✓ Plan:            [submodule]/docs/plan/sprint-[N]-[slug].md
+✓ Test plan:       [submodule]/docs/test/[YYYYMMDD]-[HHMM]-test-[slug].md
+✓ Contract tests:  [be]/tests/integration/test_[slug].[ext]
+✓ E2E tests:       [fe]/tests/e2e/[slug].spec.[ext]
 
 Impact: [N] file(s) affected — [thấp | trung | cao] risk
   [list AFFECTED files if risk is trung/cao]
@@ -346,15 +367,13 @@ Impact: [N] file(s) affected — [thấp | trung | cao] risk
 Next → Codex:
   1. Tag [plan path] in your context
   2. Implement following the plan
-  3. Verify no regression in affected files
-
-Then → Claude: /bs-claude-toolkit test [scope]
-  → generates contract + E2E test scaffold
-
-Then → Codex:
-  4. Fill in test logic (TODO comments in scaffold files)
-  5. Run tests — create docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md
-  6. Create docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+  3. Fill in TODO comments in contract test file
+  4. Fill in TODO comments in E2E test file
+  5. Create fixtures/factories for test data
+  6. Run tests: [test command per framework]
+  7. Create docs/test/[YYYYMMDD]-[HHMM]-testlog-[slug].md with results
+  8. Create docs/changelog/[YYYYMMDD]-[HHMM]-changelog-[slug].md
+  9. Verify no regression in affected files
 
 When all done → Claude: /bs-claude-toolkit review [scope]
 ```
